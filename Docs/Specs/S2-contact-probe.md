@@ -7,7 +7,7 @@
 | 베이스 브랜치 | `main` |
 | 작업 브랜치 | `codex/S2-contact-probe` |
 | 리뷰 파일 | `Docs/Reviews/S2-contact-probe.md` |
-| 에디터 작업 | **사용자:** 빈 레벨 `Content/Development/S2/L_S2_ContactProbe` 하나 (§6). Codex는 레벨·에셋을 만들지 않는다 |
+| 에디터 작업 | 빈 레벨 `Content/Development/S2/L_S2_ContactProbe` 하나 (§6). Codex는 레벨·에셋을 만들지 않는다. **2026-11-23 Claude가 MCP로 만듦(§6)** |
 | 정렬 | 없음. 이 시험대는 Buck 정렬과 무관하다(정렬은 S1, 계획서 Q-01) |
 
 ## 0. 왜 시험대부터 하나 — 엔진 사실
@@ -83,6 +83,13 @@
 - 판정 비용 측정 방법(`FPlatformTime::Seconds` 차 등).
 
 ## 6. 사용자 에디터 작업 (구현 뒤)
+
+> **완료 2026-11-23 — Claude가 MCP로 만듦**(사용자 요청 "에디터 작업은 MCP로 직접", AGENTS.md). 참가자는 원점(`SeatStart`, Stage 바닥 Z=0)에 앉아 +X를 본다. 단위 cm.
+> - `T_Cube` 엔진 Cube 20 cm, (50, 15, 80) · `T_Cylinder` 엔진 Cylinder 지름 15·높이 30, (50, −10, 80) · `T_SmallCube` 2 × 2 × 1 cm, (40, 30, 85)
+> - `T_CylinderComplex` = `SM_S2_CylinderComplex`(엔진 Cylinder 복제, `CTF_UseComplexAsSimple`, simple 0개), (50, −35, 80) · `T_KneeSide` Cube 10 cm, (20, −40, 55) — Door 쪽(−Y) 무릎 옆
+> - `ContactProbe`의 `Targets` = 위 5개, GameMode Override = `ReachProbeGameMode`, 모든 target collision `QueryAndPhysics`. 바닥 Plane·Directional·Sky light는 보기용
+> - PIE: `Game class is 'ReachProbeGameMode'`, ReachStudy 경고 없음(헤드셋 없음 `LogHMD` 잡음만). 배치 스크린샷 `Saved/Screenshots/S2_Layout.png`(git 밖)
+> - 자리는 근사값이다. 실제 앉은 자세에 안 맞으면 에디터에서 옮긴다. 회사 CAD 조각(아래 2번 마지막 줄)은 아직 없다
 
 1. 빈 레벨 `Content/Development/S2/L_S2_ContactProbe`, World Settings GameMode Override = `AReachProbeGameMode`.
 2. target 넣기 — 각각 Actor로 놓고 `AReachContactProbe`의 `Targets`에:

@@ -75,7 +75,36 @@ UnrealEditor-Cmd.exe "C:\Git\ReachStudy\ReachStudy.uproject" -ExecCmds="Automati
 ### 2.7 에이전트가 못 하는 것 — 사용자 몫
 
 - Quest 3 착용 시험, VR Preview
-- Blueprint·레벨·에셋 편집(`.uasset`은 바이너리), Project Settings, Meta XR Project Setup Tool
+- Meta XR Project Setup Tool, 대화상자 응답 등 GUI만 되는 일
+- 레벨·에셋 편집은 이제 에이전트가 MCP로 한다(§2.8, 사용자 2026-11-23)
+
+### 2.8 에디터 MCP (2026-11-23, 사용자 요청으로 Claude가 설정)
+
+**플러그인(로컬, git 밖):** vBoR과 같은 두 개를 복사해 쓴다. Intermediate·Binaries는 빼고 복사해 이 프로젝트에서 다시 빌드한다(vBoR처럼 심볼릭 링크로 두 프로젝트가 Binaries를 나눠 쓰지 않게).
+
+```
+robocopy C:\Git\Unreal_mcp\plugins\McpAutomationBridge Plugins\McpAutomationBridge /E /XD Intermediate Binaries .git
+robocopy C:\Git\UnrealAgent Plugins\UnrealAgent /E /XD Intermediate Binaries .git
+robocopy C:\Git\vBoR\.unrealagent .unrealagent /E
+```
+
+**MCP 서버 켜기(로컬 설정, git 밖):** `Saved/Config/WindowsEditor/Game.ini`
+
+```
+[/Script/McpAutomationBridge.McpAutomationBridgeSettings]
+bEnableNativeMCP=True
+```
+
+- 이것이 없으면 브리지는 8090/8091만 열고 `http://127.0.0.1:3000/mcp`는 뜨지 않는다(2026-11-23 처음 실행 때 겪음).
+- 에디터를 띄우면 약 10 s 뒤 :3000이 열린다. 토큰은 `Saved/MCP/capability-token` — 비밀번호처럼 다룬다(어디에도 붙여 넣지 않음).
+- 이 리포에는 Claude Code MCP 등록이 없다. Claude는 HTTP로 직접 부른다(`initialize` → 세션 ID → `tools/call` 도구 `unreal`, 헤더 `X-MCP-Capability-Token`). 등록하려면 vBoR Agent-Workflow §2.10의 proxy 방식에 `UE_PROJECT_PATH=C:/Git/ReachStudy`.
+- 도구는 `unreal` 하나: `search` → `describe` → `execute`. 에셋 복제·mesh collision 같은 기능은 `describe`가 주는 `consentGrant`(일회용 nonce)를 그대로 돌려줘야 실행된다.
+
+**순서:** 코드 단계(에디터 닫힘: 빌드·시험) → 에디터 단계(에디터 열림: MCP로 만들고 `manage_level.save`·`control_editor.save_all`) → 확인(속성 읽기·스크린샷, 필요하면 PIE `control_editor.play`) → **에디터 닫기**(`taskkill /PID`, 저장했으므로 잃을 것 없음) → `git status`.
+
+**하지 않는 것:** 사용자가 연 에디터에 쓰기(열려 있으면 멈추고 보고), 에셋 삭제·이름 바꾸기, 사용자 레벨 수정(명세가 허락한 경우 빼고), `Config/*.ini` 변경, MCP Python·콘솔로 이 금지를 우회하기.
+
+**확인한 것(2026-11-23):** PIE에서 헤드셋이 없으면 `LogHMD: GetCurrentInteractionProfile ... session is null` 경고가 프레임마다 난다 — 잡음. 헤드셋 없는 PIE 카메라는 바닥 높이(Stage 원점)라 화면이 거의 비어 보인다. 배치 확인은 에디터 뷰포트 스크린샷(`control_editor.screenshot`에 `location`·`rotation`)으로 한다.
 
 ## 3. 기록 체계
 

@@ -63,3 +63,4 @@
 - UE 5.7.4 (`C:\Program Files\Epic Games\UE_5.7`), C++ 모듈 `ReachStudy`. 빌드: `Engine/Build/BatchFiles/Build.bat ReachStudyEditor Win64 Development -Project=<절대경로>\ReachStudy.uproject`
 - **Meta XR 1.205.0(`Plugins/MetaXR/`)과 ISDK 1.205.0(`Plugins/MetaXRInteraction/`)은 git에 없다.** 클론한 뒤 직접 복사한다(README). OculusXR·ISDK API는 기억이 아니라 그 폴더의 헤더로 확인한다.
 - 에디터는 `.uasset`을 잠근다. git 브랜치 전환·머지·C++ 리빌드 전에 Unreal Editor를 닫는다.
+- **에디터 작업(레벨·에셋·배치)은 에이전트가 MCP로 직접 한다**(사용자 2026-11-23). 에디터 MCP 플러그인 `Plugins/McpAutomationBridge`·`Plugins/UnrealAgent`는 vBoR과 같은 로컬 도구다(git 밖, 각 PC에서 복사). 연결·순서·하지 않는 것은 [Docs/Agent-Workflow.md](Docs/Agent-Workflow.md) §2.8. ReachStudy 코드·에셋은 이 플러그인을 참조하지 않는다.
