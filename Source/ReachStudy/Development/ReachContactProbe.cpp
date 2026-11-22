@@ -3,6 +3,8 @@
 #include "Components/InputComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/Engine.h"
+#include "EngineUtils.h"
+#include "Door/ReachDoorVariants.h"
 #include "GameFramework/PlayerController.h"
 #include "Hand/ReachHandPawn.h"
 #include "HAL/PlatformTime.h"
@@ -47,6 +49,18 @@ void AReachContactProbe::BeginPlay()
 {
     Super::BeginPlay();
     EnsureTouchMaterial();
+    if (!IsValid(DoorVariants))
+    {
+        for (TActorIterator<AReachDoorVariants> It(GetWorld()); It; ++It)
+        {
+            DoorVariants = *It;
+            break;
+        }
+    }
+    if (IsValid(DoorVariants))
+    {
+        DoorVariants->OnVariantChanged.AddUniqueDynamic(this, &AReachContactProbe::HandleVariantChanged);
+    }
     APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
     if (PC)
     {
@@ -103,6 +117,14 @@ void AReachContactProbe::ProcessFrame(const FReachHandSample& Left, const FReach
         const double Start = FPlatformTime::Seconds();
         FReachProbeResult Result;
         Result.Target = Target;
+        if (IsValid(DoorVariants) && !DoorVariants->IsActorActive(Target))
+        {
+            States.Remove(Target);
+            ReachContact::ApplyOverlay(Target, nullptr);
+            Result.bInactive = true;
+            Results.Add(Result);
+            continue;
+        }
         Result.Hands[0] = ReachContact::Query(Target, Left, ContactDistanceMm, ReleaseMarginMm, bUseJointRadius);
         Result.Hands[1] = ReachContact::Query(Target, Right, ContactDistanceMm, ReleaseMarginMm, bUseJointRadius);
         const bool bSimple = ContactMethod == EReachContactMethod::SimpleDistance;
@@ -148,11 +170,21 @@ void AReachContactProbe::HandleKey(FKey Key)
 void AReachContactProbe::DrawReadout(const FReachHandSample& Left, const FReachHandSample& Right)
 {
     if (!GEngine) { return; }
+    GEngine->AddOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()), 0.0f, FColor::White, BuildReadout(Left, Right));
+}
+
+FString AReachContactProbe::BuildReadout(const FReachHandSample& Left, const FReachHandSample& Right) const
+{
     double TotalMicroseconds = 0.0;
     FString Rows;
     for (const FReachProbeResult& Result : Results)
     {
         TotalMicroseconds += Result.CostMicroseconds;
+        if (Result.bInactive)
+        {
+            Rows += FString::Printf(TEXT("\n%s inactive"), *GetNameSafe(Result.Target.Get()));
+            continue;
+        }
         Rows += FString::Printf(TEXT("\n%s %s | A L %s / R %s | B L %s / R %s | %.1f us"),
             *GetNameSafe(Result.Target.Get()), PhaseName(Result.Phase),
             *SimpleText(Result.Hands[0], Left.bTracked), *SimpleText(Result.Hands[1], Right.bTracked),
@@ -164,7 +196,17 @@ void AReachContactProbe::DrawReadout(const FReachHandSample& Left, const FReachH
         ContactDistanceMm, ReleaseMarginMm, DwellSeconds, TrackingGraceSeconds,
         bUseJointRadius ? TEXT("on") : TEXT("off"), Left.bTracked ? TEXT("tracked") : TEXT("lost"),
         Right.bTracked ? TEXT("tracked") : TEXT("lost"), TotalMicroseconds);
-    GEngine->AddOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()), 0.0f, FColor::White, Header + Rows);
+    FString DoorHeader;
+    if (IsValid(DoorVariants) && DoorVariants->Variants.IsValidIndex(DoorVariants->GetActiveVariant()))
+    {
+        DoorHeader = FString::Printf(TEXT("door %s | "), *DoorVariants->Variants[DoorVariants->GetActiveVariant()].Name.ToString());
+    }
+    return DoorHeader + Header + Rows;
+}
+
+void AReachContactProbe::HandleVariantChanged(int32 Index)
+{
+    ResetContacts();
 }
 
 void AReachContactProbe::ResetContacts()
@@ -176,6 +218,10 @@ void AReachContactProbe::ResetContacts()
 
 void AReachContactProbe::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+    if (IsValid(DoorVariants))
+    {
+        DoorVariants->OnVariantChanged.RemoveDynamic(this, &AReachContactProbe::HandleVariantChanged);
+    }
     ResetContacts();
     if (GEngine) { GEngine->RemoveOnScreenDebugMessage(GetUniqueID()); }
     Super::EndPlay(EndPlayReason);

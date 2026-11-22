@@ -8,16 +8,16 @@
 #include "MotionControllerComponent.h"
 #include "Rig/IsdkGrabInteractionRigComponent.h"
 #include "Rig/IsdkPokeInteractionRigComponent.h"
+#include "Rig/IsdkPokeLimiterRigModifier.h"
 #include "Rig/IsdkRayInteractionRigComponent.h"
 
 namespace
 {
-void ConfigureVisualOnly(UIsdkHandRigComponent* Rig)
+void ConfigurePokeOnly(UIsdkHandRigComponent* Rig)
 {
-    // Preserve SDK internal references; display hands only (S2 D1).
+    // Preserve SDK internal references; permit near poke only (S4 D7).
     for (UActorComponent* Interaction : {static_cast<UActorComponent*>(Rig->GetRayInteraction()),
-        static_cast<UActorComponent*>(Rig->GetGrabInteraction()),
-        static_cast<UActorComponent*>(Rig->GetPokeInteraction())})
+        static_cast<UActorComponent*>(Rig->GetGrabInteraction())})
     {
         Interaction->bAutoActivate = false;
         Interaction->Deactivate();
@@ -31,14 +31,16 @@ void ConfigureVisualOnly(UIsdkHandRigComponent* Rig)
 
 UReachHandRigLeft::UReachHandRigLeft()
 {
+    RigModifiersToSpawn.Add(UIsdkPokeLimiterRigModifier::StaticClass());
     bAutoBindInputActions = false;
-    ConfigureVisualOnly(this);
+    ConfigurePokeOnly(this);
 }
 
 UReachHandRigRight::UReachHandRigRight()
 {
+    RigModifiersToSpawn.Add(UIsdkPokeLimiterRigModifier::StaticClass());
     bAutoBindInputActions = false;
-    ConfigureVisualOnly(this);
+    ConfigurePokeOnly(this);
 }
 
 AReachHandPawn::AReachHandPawn()
