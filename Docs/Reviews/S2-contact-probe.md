@@ -126,10 +126,10 @@
 
 ### 확인한 것
 
-- **제약:** 손 관절은 XR 원본(`GetHandTrackingState`)만 쓴다. 레이·잡기·poke 모두 비활성(`ReachHandPawn.cpp:62-76`, 레이 컴포넌트는 지우지 않음). 판정 여유는 `ContactDistanceMm`+`ReleaseMarginMm`뿐, 관절 반지름은 켬/끔. 기록 파일 없음(화면 메시지만). 코드·문구 영어.
+- **제약:** 손 관절은 XR 원본(`GetHandTrackingState`)만 쓴다. 레이·잡기·poke 모두 비활성(`ReachHandPawn.cpp:15-29`, 레이 컴포넌트는 지우지 않음). 판정 여유는 `ContactDistanceMm`+`ReleaseMarginMm`뿐, 관절 반지름은 켬/끔. 기록 파일 없음(화면 메시지만). 코드·문구 영어.
 - **D4 상태 규칙**(`Contact/ReachContact.h`): 손별 실측/보류/없음, 복구 첫 프레임 제외(`bTracked && bWasTracked`, `:28`), 복구 프레임이 보류 시간에 들어감(`:39`), 보류 Enter만 있으면 dwell 멈춤(`:64`), `Touching`은 실측·보류 Hold로 유지. 명세 개정 2와 같다. 엔진 의존 없음(§2).
-- **D5 방식 A·B**(`ReachContactQuery.cpp:105-154`): A는 `GetSquaredDistanceToCollision` 최소값, cm→mm 변환 주석, 반지름 켜면 뺀다. B는 `GetBodyInstance()->OverlapTest(..., true)` 두 반지름. query collision이 꺼졌거나 body가 없으면 `no collision`. `OverlapComponent`·sweep을 쓰지 않았다.
-- **D6 overlay:** `TouchMaterial` 또는 ISDK `GrabbableLit` MID + `ColorParam`, 상태가 바뀔 때만 적용(`ReachContactProbe.cpp:180-183`). slot material·transform·mesh·collision 보존을 E17에서 시험.
+- **D5 방식 A·B**(`ReachContactQuery.cpp:49-98`): A는 `GetSquaredDistanceToCollision` 최소값, cm→mm 변환 주석, 반지름 켜면 뺀다. B는 `GetBodyInstance()->OverlapTest(..., true)` 두 반지름. query collision이 꺼졌거나 body가 없으면 `no collision`. `OverlapComponent`·sweep을 쓰지 않았다.
+- **D6 overlay:** `TouchMaterial` 또는 ISDK `GrabbableLit` MID + `ColorParam`, 상태가 바뀔 때만 적용(`ReachContactProbe.cpp:114-117`). slot material·transform·mesh·collision 보존을 E17에서 시험.
 - **D7 키·화면:** 키 13개 전부, 범위 제한, 헤더(모드·방식·값 넷·반지름·손별 추적·총 비용)와 target별 줄. 설정을 바꾸면 상태 초기화(보고 ③) — 명세에 없던 동작이지만 이전 설정의 결과가 남지 않게 하는 것이라 받아들인다.
 - **시험:** §4 E1–E17·E7b–f·E13b·E15b가 모두 들어 있고 숫자가 명세와 같다(예: E14 = 표면에서 3 cm 안쪽 `X=47`, E7d = 보류 0.1 s 넘는 프레임에 `Idle`). complex만 있는 형상은 엔진 Cube 복제본의 `CTF_UseComplexAsSimple` + simple 요소 삭제로 만들었다 — 에셋 파일을 만들지 않았다.
 
@@ -139,7 +139,7 @@
 
 ### 제안 (다음 명세에서, 이번 브랜치에서 고치지 않아도 됨)
 
-- **S-1 Pawn이 `AReachHandPawn`이 아닐 때 알림.** GameMode Override를 빠뜨리면 `ReachContactProbe.cpp:147`에서 Pawn이 null이 되어 두 손이 계속 `lost`로 보인다. 손 추적이 안 되는 것과 구분이 안 된다. 헤더에 `no ReachHandPawn` 같은 한 줄이면 된다. S3 명세에 넣는다.
+- **S-1 Pawn이 `AReachHandPawn`이 아닐 때 알림.** GameMode Override를 빠뜨리면 `ReachContactProbe.cpp:81`에서 Pawn이 null이 되어 두 손이 계속 `lost`로 보인다. 손 추적이 안 되는 것과 구분이 안 된다. 헤더에 `no ReachHandPawn` 같은 한 줄이면 된다. S3 명세에 넣는다.
 - **S-2 dwell 누적 오차.** `DwellElapsedSeconds += DeltaSeconds`(`ReachContact.h:60`)는 90 Hz에서 0.15 s 경계를 한 프레임(11 ms) 늦게 넘을 수 있다. 시험대에서는 무시해도 된다. S3에서 dwell을 평가에 쓰면 그때 정한다.
 
 ### 사용자에게 묻는 것 (코드 밖)
@@ -149,3 +149,5 @@
 ### 다음
 
 - 사용자: `main` 머지 승인 → 명세 §6 레벨 구성 → Quest 3 T-02(`not-tested`). Quest 결과로 방식(A/B)·기본값·표면 뒤 처리(계획서 D-03)를 정하면 S2가 끝나고 S3 명세를 쓴다.
+
+- 2026-11-23 정정(Claude): 위 리뷰의 ReachStudy 소스 줄 번호를 실제 파일 기준으로 고침(여러 파일을 이어 본 번호였음).
