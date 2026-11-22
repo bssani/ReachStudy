@@ -11,8 +11,8 @@
 | ID | 결정 | 내용 |
 |---|---|---|
 | D-01 | **정렬 = 마커 + 앵커** | vBoR의 마커 정렬(M1/M2, ArUco + Passthrough Camera Access + `FitPoints`)과 앵커 유지(M3b)를 쓴다. 앵커가 Link에서 되는지는 사용자가 회사에서 확인한다(2026-11-23 예정). 안 되면 앵커 없이 마커만 쓴다 |
-| D-02 | **닿음 부위 = 드롭다운** | `IndexTip`(검지 끝) / `Fingers`(손가락 전부, **기본값**) / `WholeHand`(손 전체). 에디터 드롭다운(UENUM) |
-| D-03 | **허용 거리 조절 가능** | 손 관절과 target 표면 사이 거리 ≤ `ContactDistanceMm`이면 닿음. 표면 안쪽(관통)은 언제나 닿음. 값은 프로퍼티로 고칠 수 있다 (권장 기본값 §4) |
+| D-02 | **닿음 부위 = 드롭다운** | `IndexTip`(검지 끝) / `Fingertips`(다섯 손가락 끝, **기본값**) / `WholeHand`(손 전체 관절 26개). 에디터 드롭다운(UENUM) (사용자 2026-11-22 Q-03) |
+| D-03 | **허용 거리 조절 가능** | 손 관절과 target 표면 사이 거리 ≤ `ContactDistanceMm`이면 닿음. 값은 프로퍼티로 고칠 수 있다 (권장 기본값 §4). 손이 target 표면 뒤로 깊이 들어간 경우의 처리는 S2에서 정한다(CAD target이 닫힌 부피인지 얇은 면인지에 달림) |
 | D-04 | **dwell 조절 가능** | 닿음 조건이 `DwellSeconds` 동안 끊기지 않아야 닿음으로 바뀐다. 0이면 즉시 |
 | D-05 | **닿는 동안만 material 변경** | 떨어지면 바로 원래 material로 돌아간다. 누적·완료 상태 없음 |
 | D-06 | **다른 면 통과는 따지지 않음** | Door trim·IP를 통과해 닿아도 닿음 |
@@ -23,16 +23,16 @@
 | D-11 | **프로젝트** | `C:\Git\ReachStudy`, GitHub `bssani/ReachStudy` **public**. UE 5.7.4, Meta XR·ISDK 1.205.0(vBoR과 같은 버전, git에는 넣지 않음) |
 | D-12 | **작업 방식 = vBoR과 같음** | Claude 명세·리뷰, Codex 앱 구현, 사용자 에디터·Quest 시험 |
 
-## 3. 열린 결정
+## 3. 열린 결정 → 결정 (사용자 2026-11-22)
 
-| ID | 질문 | Claude 제안 |
-|---|---|---|
-| **Q-01** | **정렬 코드를 어떻게 가져오나** | vBoR 쪽에서 이미 "Calibration을 재사용 플러그인으로 빼기"를 논의 중이다(vBoR `Docs/Design/2026-11-20-calibration-plugin-handoff.md`). 그 문서의 성공 기준 후보가 "차량·시나리오 없는 작은 별도 프로젝트에서 보정 → 저장 → 재시작 후 복원"인데, **ReachStudy가 바로 그 프로젝트다.** <br>**A (권장): vBoR에서 Calibration 플러그인을 먼저 추출하고 ReachStudy는 그 플러그인을 쓴다.** 코드가 하나라 두 프로젝트가 갈라지지 않는다. vBoR 쪽 작업이 먼저 필요하다. <br>B: 필요한 파일을 ReachStudy로 복사한다. 빠르지만 vBoR 수정이 ReachStudy에 따라오지 않아 곧 두 벌이 된다. 특히 **회사 PC의 vBoR 코드가 이 PC와 다르다**(인계 문서 §1)는 점 때문에 복사본이 어느 쪽 기준인지부터 흐려진다 |
-| Q-02 | 회사 vBoR의 정렬 코드가 이 PC `main@1a17da9`와 다른가 | 다르면 추출 기준을 회사 쪽으로 해야 한다. 회사에서 `Source/vBoR/Interaction/VBoR*Alignment*`, `VBoRBuckProfiles.cpp`, `M1Probe/M1Marker*` 의 `git log`/diff만 확인하면 된다 |
-| Q-03 | `Fingers`의 정의 | 제안: 다섯 손가락의 **모든 관절점**(끝·마디). `WholeHand` = 그것 + 손바닥·손목 관절. 관절 사이(마디 중간)는 점이 없으므로 허용 거리로 메운다. 캡슐(뼈 길이) 판정은 S2 결과를 보고 필요하면 넣는다 |
-| Q-04 | 설정 위치 | 제안: 레벨에 하나 두는 `AReachStudySettings`(또는 게임 모드)에 D-02~D-04 값을 모은다(target마다 따로 두지 않음 — 한 곳만 고치면 되게). target별 덮어쓰기는 필요해지면 |
-| Q-05 | 3D widget 버튼 자리 | 참가자 reach 영역 밖(예: 조수석 쪽 대시 위). 누가 누르나 — 참가자가 진행자 말을 듣고 누르는지, 진행자가 헤드셋 없이 키보드만 쓰는지 |
-| Q-06 | 진행자 화면(PC 창)에 무엇을 보이나 | 제안: 현재 Door(A/B), 정렬 상태, 지금 닿은 target 이름 목록, 손 추적 상태(좌·우). 텍스트만 |
+| ID | 결정 |
+|---|---|
+| Q-01 | **정렬은 vBoR에서 Calibration 플러그인을 먼저 뺀 뒤 그 플러그인을 쓴다.** 플러그인 추출은 vBoR 리포의 작업이다(vBoR `Docs/Design/2026-11-20-calibration-plugin-handoff.md`). S1은 그 뒤에 한다. 그동안 S2·S3·S4는 정렬 없이 진행한다 |
+| Q-02 | 회사 vBoR 정렬 코드와 이 PC `main@1a17da9`의 차이 — 플러그인 추출 전에 확인(vBoR 작업) |
+| Q-03 | `Fingertips` = 다섯 손가락 끝(`ThumbTip`·`IndexTip`·`MiddleTip`·`RingTip`·`LittleTip`). `WholeHand` = 손 관절 전부(`EHandKeypoint` 26개) |
+| Q-04 | (제안대로) 설정 D-02~D-04는 레벨에 하나 두는 설정 Actor에 모은다. target별 덮어쓰기 없음 |
+| Q-05 | **3D 버튼은 참가자가 누른다.** Door·IP 밖의 빈 공간(예: 조수석 쪽)에 둔다. 버튼은 판정 대상이 아니다 |
+| Q-06 | 진행자 PC 창: 현재 Door(A/B), 정렬 상태, 지금 닿아 있는 target 이름, 좌·우 손 추적 상태. 텍스트만 |
 
 ## 4. 허용 거리·dwell 권장 기본값
 
@@ -57,16 +57,16 @@
 | 손 관절 읽기 | Pawn에서 추적된 원본 관절 위치(vBoR `AVBoRHandRigPawn::ReadRawIndexTip` / `ReadRawPalmAndTips`와 같은 경로). 신뢰도 낮음·추적 끊김 = 판정 안 함 |
 | 닿음 판정 | 관절점마다 target mesh까지의 최소 거리. 방식(Complex collision 거리 / 단순 collision 생성)은 **S2에서 정한다** |
 | `AReachVariantSet` (C++) | Door A·Door B 각각의 Actor 목록. 활성 Door만 visible·collision·판정. 전환하면 모든 target 초기화(D-08). IP는 이 목록에 없다 |
-| 진행자 입력 | 키보드(키 배치는 S4 명세) + 3D widget poke 버튼. vBoR `BP_LightPanel`(widget poke) 방식 |
-| 정렬 | Q-01 결과에 따라 플러그인 또는 이식. 운전석 하나, 시나리오·좌석 전환 없음 |
+| 진행자 입력 | 키보드(키 배치는 S4 명세) + **참가자가 누르는** 3D widget poke 버튼(Q-05). vBoR `BP_LightPanel`(widget poke) 방식 |
+| 정렬 | vBoR Calibration 플러그인(Q-01). 운전석 하나, 시나리오·좌석 전환 없음 |
 
 ## 6. 단계
 
 | ID | 명세 | 핵심 | 완료 조건 |
 |---|---|---|---|
 | **S0** | 프로젝트 부트스트랩 | 빈 C++ 프로젝트, 규칙 문서, Meta 플러그인 복사, git·GitHub | **완료 2026-11-22** (Claude). 빌드 결과는 개정 이력 |
-| **S1** | 정렬 가져오기 | Q-01 결과대로. 마커 기록·저장·재시작 복원, 앵커 옵션(D-01) | 자동화 시험 통과, Quest에서 마커 정렬 → 재시작 복원 (T-01) |
-| **S2** | 닿음 판정 spike | 시험대 레벨에서 손 관절 ↔ CAD 형상 mesh 거리. collision 방식 비교, 거리·dwell·히스테리시스 실측, 추적 끊김 | Quest 실측 기록, 방식·기본값 결정 (T-02). S1과 병렬 가능(정렬 없이) |
+| **S1** | 정렬 가져오기 | vBoR Calibration 플러그인을 넣는다(Q-01, 플러그인 추출 뒤). 마커 기록·저장·재시작 복원, 앵커 옵션(D-01) | 자동화 시험 통과, Quest에서 마커 정렬 → 재시작 복원 (T-01) |
+| **S2** | 닿음 판정 spike | [명세](Specs/S2-contact-probe.md). 손 Pawn, 관절 읽기, 상태 규칙(순수 구조체), 거리 방식 A/B 비교 시험대 | Quest 실측 기록, 방식·기본값 결정 (T-02). 정렬 없이 |
 | **S3** | `AReachTarget` | S2 결과로 판정·상태·material 전환, 설정(D-02~D-04, Q-04) | 자동화 시험: 진입·dwell·이탈·히스테리시스·추적 끊김·부위 모드 3종 |
 | **S4** | Door 전환 + 진행자 | `AReachVariantSet`, 키보드·3D 버튼, 진행자 창 텍스트(Q-06) | 자동화 시험: 비활성 Door target 판정 안 됨, 전환 시 초기화, 동시 입력 |
 | **S5** | Main 통합 | CAD Datasmith import(`Content/CAD/`, git 밖), target BP 배치, `L_Main` | Quest 전체 흐름 (T-03) |
@@ -89,3 +89,4 @@
 ## 개정 이력
 
 - 2026-11-22 — 초안. 사용자 답 D-01~D-12 반영, Q-01~Q-06 열림.
+- 2026-11-22 — Q-01·Q-03·Q-05·Q-06 사용자 답 반영. D-02 `Fingers` → `Fingertips`(다섯 손가락 끝). D-03 "표면 안쪽 언제나 닿음"은 Claude가 근거 없이 넣은 것이라 빼고 S2에서 정함(엔진 거리 함수가 오목 형상을 지원하지 않음, S2 §0). S2 명세 작성.
