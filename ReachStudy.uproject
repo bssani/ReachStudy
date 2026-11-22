@@ -19,6 +19,10 @@
 			"Name": "OpenCV",
 			"Enabled": true,
 			"PlatformAllowList": ["Win64"]
+		},
+		{
+			"Name": "AndroidFileServer",
+			"Enabled": false
 		}
 	]
 }
