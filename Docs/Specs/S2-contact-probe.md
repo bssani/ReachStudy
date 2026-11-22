@@ -6,7 +6,7 @@
 | 결정 근거 | 계획서 D-02(부위 드롭다운)·D-03(허용 거리)·D-04(dwell)·D-05(닿는 동안만)·Q-03(`Fingertips` = 다섯 손가락 끝). 사용자 2026-11-22 |
 | 베이스 브랜치 | `main` |
 | 작업 브랜치 | `codex/S2-contact-probe` |
-| 리뷰 파일 | `Docs/Reviews/S2-contact-probe.md` (첫 리뷰 때 생김) |
+| 리뷰 파일 | `Docs/Reviews/S2-contact-probe.md` |
 | 에디터 작업 | **사용자:** 빈 레벨 `Content/Development/S2/L_S2_ContactProbe` 하나 (§6). Codex는 레벨·에셋을 만들지 않는다 |
 | 정렬 | 없음. 이 시험대는 Buck 정렬과 무관하다(정렬은 S1, 계획서 Q-01) |
 
@@ -26,16 +26,16 @@
 | D1 | **손 Pawn `AReachHandPawn`** | `Source/ReachStudy/Hand/`. vBoR `AVBoRHandRigPawn` 구성을 따른다(로컬 `C:\Git\vBoR\Source\vBoR\Interaction\VBoRHandRigPawn.cpp:97-115`. 통째로 복사하지 말고 필요한 부분만 다시 쓴다): 루트 Scene, Camera(`bLockToHmd`), MotionController 좌·우(`Left`/`Right`, `bDisableLowLatencyUpdate`), ISDK 손 rig `UIsdkHandRigComponentLeft/Right`(`Plugins/MetaXRInteraction/Source/OculusInteractionPrebuilts/Public/Rig/IsdkHandRigComponent.h:142,161`)를 MotionController 밑에. **손 모양 표시만 쓴다.** 레이·잡기는 vBoR `ConfigurePokeRig`처럼 끈다(`C:\Git\vBoR\Source\vBoR\Interaction\VBoRHandRigPawn.cpp:21-33`, 레이 컴포넌트는 지우지 말고 비활성 + `RayVisualClass = nullptr`, `GetRayInteraction`/`GetGrabInteraction`/`GetGrabber` `IsdkRigComponent.h:193,200,214`). `bAutoBindInputActions = false`(`:350`). **poke limiter는 넣지 않는다**(poke 버튼은 S4).<br>**모듈 의존(`ReachStudy.Build.cs`):** `OculusInteraction`, `OculusInteractionPrebuilts`(ISDK rig, vBoR `vBoR.Build.cs`와 같음), `HeadMountedDisplay`, `XRBase`(`GetHandTrackingState`). 손 추적 공급은 vBoR과 같은 구성(Meta XR, `XrApi=NativeOpenXR`, `Config/DefaultEngine.ini`)이다 — 손 관절이 `bValid`로 오지 않으면 플러그인을 임의로 더하지 말고 질문 |
 | D2 | **관절 읽기 = XR 원본** | `UHeadMountedDisplayFunctionLibrary::GetHandTrackingState`(`Engine/Plugins/Runtime/XRBase/Source/XRBase/Public/HeadMountedDisplayFunctionLibrary.h:352`), `EXRSpaceType::UnrealWorldSpace`. 받는 조건: `bValid && TrackingStatus == Tracked`(`Engine/Source/Runtime/HeadMountedDisplay/Public/HeadMountedDisplayTypes.h:421`)이고 쓰는 관절의 `HandKeyLocations`(`:425`)가 유효·NaN 아님. 하나라도 안 맞으면 **그 손은 이번 프레임 추적 안 됨**(일부 관절만 쓰지 않음). 관절 반지름 `HandKeyRadii`(`HeadMountedDisplayTypes.h:433`, OpenXR이 채움 `Engine/Plugins/Runtime/OpenXR/Source/OpenXRHMD/Private/OpenXRHMD.cpp:387`)도 같이 읽는다(D5). ISDK 손 모델·rig 위치를 쓰지 않는다(AGENTS.md "추적된 실제 손 관절") |
 | D3 | **부위 모드 `EReachContactPart`** (UENUM, BlueprintType) | `IndexTip` = `EHandKeypoint::IndexTip`. `Fingertips`(**기본**) = `ThumbTip`·`IndexTip`·`MiddleTip`·`RingTip`·`LittleTip`. `WholeHand` = `EHandKeypoint` 전부(`EHandKeypointCount` = 26, `HeadMountedDisplayTypes.h:260-290`). `DisplayName`은 영어 그대로 |
-| D4 | **상태 규칙 = 엔진 없는 구조체 `FReachContactState`** | `Source/ReachStudy/Contact/ReachContact.h`. 프레임마다 넣는 것: 손별 `bTracked`, 손별 "닿음 조건" 결과(Enter/Hold/None — §1 D5가 만든다), `DeltaSeconds`. 값: `ContactDistanceMm`(기본 10, 0–50), `ReleaseMarginMm`(기본 5, 0–20), `DwellSeconds`(기본 0.15, 0–2), `TrackingGraceSeconds`(기본 0.1, 0–1). 상태 `Idle` → `Dwelling` → `Touching`.<br>- `Idle`/`Dwelling`: 어느 손이든 **Enter**(거리 ≤ `ContactDistanceMm`)면 dwell 시간을 더한다. `DwellSeconds` 이상이 되면 `Touching`. 같은 프레임에 Enter가 없으면 dwell 0, `Idle`. `DwellSeconds` 0이면 첫 Enter 프레임에 바로 `Touching`.<br>- `Touching`: 어느 손이든 **Hold**(거리 ≤ `ContactDistanceMm + ReleaseMarginMm`)면 유지. 아니면 즉시 `Idle`(D-05, 떨어질 때 dwell 없음).<br>- **추적 끊김 = 보류**(vBoR "추적 손실은 보류이지 완료가 아니다"): 추적되지 않은 손은 Enter·Hold를 낼 수 없다. **다시 추적된 첫 프레임의 그 손도 판정하지 않는다**(복구 튐). 판정할 수 있는 손이 하나도 없는 동안은 상태와 dwell 시간을 **그대로 둔다**(더하지도 0으로 만들지도 않음). 그 시간이 `TrackingGraceSeconds`를 넘으면 `Idle`, dwell 0. 판정할 수 있는 손이 하나라도 있으면 그 손만으로 판정한다(보류 없음).<br>- 두 손이 같은 target에 닿으면 하나라도 조건을 만족하면 된다.<br>- 상태가 바뀔 때만 바뀜 신호를 낸다(같은 상태 반복 없음) |
+| D4 | **상태 규칙 = 엔진 없는 구조체 `FReachContactState`** | `Source/ReachStudy/Contact/ReachContact.h`. 프레임마다 넣는 것: 손별 판정 가능 여부, 손별 "닿음 조건" 결과(Enter / Hold / None. Enter면 Hold도 참. §1 D5가 만든다), `DeltaSeconds`. 값: `ContactDistanceMm`(기본 10, 0–50), `ReleaseMarginMm`(기본 5, 0–20), `DwellSeconds`(기본 0.15, 0–2), `TrackingGraceSeconds`(기본 0.1, 0–1, 계획서 §4). 상태 `Idle` → `Dwelling` → `Touching`.<br>- **손마다 이번 프레임 결과는 셋 중 하나다** (vBoR "추적 손실은 보류이지 완료가 아니다"):<br>&nbsp;&nbsp;· **실측**: 판정 가능한 손 → D5 결과(Enter/Hold/None).<br>&nbsp;&nbsp;· **보류**: 판정 불가(추적 안 됨, 또는 **다시 추적된 첫 프레임** — 복구 튐)이고, 그 손의 마지막 실측 프레임에서 지금까지 `TrackingGraceSeconds` 이하 → 마지막 실측 결과를 그대로 쓴다. 보류 시간에는 끊긴 프레임과 복구 첫 프레임이 모두 들어간다.<br>&nbsp;&nbsp;· **없음**: 판정 불가이고 보류 시간을 넘음, 또는 실측이 한 번도 없음 → None.<br>- `Idle`/`Dwelling`: 어느 손이든 **실측 Enter**면 dwell 시간을 더한다. 실측 Enter는 없고 **보류 Enter**만 있으면 dwell을 그대로 둔다(멈춤, 상태 그대로). 둘 다 없으면 dwell 0, `Idle`. dwell이 `DwellSeconds` 이상이 되면 `Touching`. `DwellSeconds` 0이면 첫 실측 Enter 프레임에 바로 `Touching`.<br>- `Touching`: 어느 손이든 **Hold**(실측 또는 보류, 거리 ≤ `ContactDistanceMm + ReleaseMarginMm`)면 유지. 아니면 즉시 `Idle`(D-05, 떨어질 때 dwell 없음).<br>- 두 손은 따로 센다. 한 손이 보류 중이어도 다른 손의 실측은 그대로 쓴다.<br>- 상태가 바뀔 때만 바뀜 신호를 낸다(같은 상태 반복 없음) |
 | D5 | **거리 방식 둘 — 시험대에서 같이 계산** | target 하나(그 Actor의 모든 `UStaticMeshComponent`)·손 하나마다, 모드의 관절점 전부에 대해:<br>**A `SimpleDistance`**: component마다 `GetSquaredDistanceToCollision`(`PrimitiveComponent.h:2271`), 그중 최소 거리(mm, UE cm → mm 변환 자리에 주석). 값이 없으면(`false` — simple collision 없음, `PhysInterface_Chaos.cpp:1259-1264`) `n/a`로 보이고 Enter·Hold 없음. 0(convex 안)이면 0 mm. Enter = 거리 ≤ `ContactDistanceMm`, Hold = 거리 ≤ `ContactDistanceMm + ReleaseMarginMm`.<br>**B `ComplexOverlap`**: component마다 `GetBodyInstance()->OverlapTest(관절 위치, 단위 회전, MakeSphere(반지름), nullptr, true)`(§0). 반지름 = Enter용 `ContactDistanceMm`, Hold용 `ContactDistanceMm + ReleaseMarginMm`. 거리 값이 없으므로 화면에는 `enter`/`hold`/`-`. body instance가 없으면(collision 꺼짐) `no collision`으로 보이고 Enter·Hold 없음.<br>**관절 반지름 `bUseJointRadius`(기본 false, 키 `R`):** 켜면 A는 거리에서 그 관절 반지름을 빼고(0 아래면 0), B는 구 반지름에 관절 반지름을 더한다 — "관절 중심"이 아니라 "손 겉면"에서 잰다. 반지름이 없거나 0이면 0으로 본다. A 줄에는 켬/끔과 상관없이 관절 반지름(mm)도 보인다. 어느 쪽을 쓸지는 Quest에서 정한다(§8).<br>- 판정에 쓰는 방식은 `ContactMethod`(UENUM, 기본 B `ComplexOverlap`) 하나지만, **화면에는 두 방식 결과를 모두** 보인다(D7) |
 | D6 | **닿음 표시 = overlay material** | `UMeshComponent::SetOverlayMaterial`(`Engine/Source/Runtime/Engine/Classes/Components/MeshComponent.h:56`). `Touching` = 닿음 material, 그 밖 = `nullptr`. **target 원래 slot material은 건드리지 않는다**(§2). 닿음 material은 vBoR 상태 overlay와 같은 방식: ISDK `IsdkContentAssetPaths::Materials::GrabbableDefault`(`/OculusInteraction/Materials/GrabbableLit`, `Plugins/MetaXRInteraction/Source/OculusInteraction/Public/IsdkContentAssetPaths.h:137`)의 MID, 벡터 파라미터 `ColorParam`(vBoR `VBoRAxisPart.cpp:251-252,665`) = `TouchColor`(기본 초록). 프로퍼티 `TouchMaterial`이 있으면 그것을 MID 부모로 쓴다. `Dwelling`은 표시하지 않는다(D-05) |
-| D7 | **시험대 `AReachContactProbe`** | `Source/ReachStudy/Development/`. 레벨에 놓고 `Targets`(TArray<TObjectPtr<AActor>>)에 시험할 Actor를 넣는다. 각 Actor의 모든 `UStaticMeshComponent`가 그 target의 형상이다. 설정 D3–D5 값은 이 Actor 하나에 있다(계획서 Q-04).<br>**화면(PC 창 `GEngine` 메시지, 매 프레임 덮어씀):** 맨 위에 모드·방식·`ContactDistanceMm`·`ReleaseMarginMm`·`DwellSeconds`·`TrackingGraceSeconds`·관절 반지름 켬/끔, 손별 추적 상태(`L tracked`/`L lost`). target마다 한 줄: 이름, 상태, A 최소 거리 mm(손별)과 가장 가까운 관절 이름, B 결과(손별), 이번 프레임 판정 비용(µs, 모든 target 합은 맨 위에).<br>**키(PIE·Link에서 키보드):** `M` 방식 A↔B, `1`/`2`/`3` 부위 모드, `=`/`-` `ContactDistanceMm` ±1 mm, `]`/`[` `DwellSeconds` ±0.05 s, `.`/`,` `ReleaseMarginMm` ±1 mm, `R` 관절 반지름 켬/끔(D5). 범위 밖으로 가지 않는다(D4).<br>**기록 파일을 만들지 않는다**(계획서 D-07). 숫자는 사용자가 화면에서 읽는다. `GEngine` 메시지는 헤드셋 화면에도 겹쳐 보일 수 있다 — 시험대에서만 쓰고, 진행자 창은 S4에서 따로 정한다 |
+| D7 | **시험대 `AReachContactProbe`** | `Source/ReachStudy/Development/`. 레벨에 놓고 `Targets`(TArray<TObjectPtr<AActor>>)에 시험할 Actor를 넣는다. 각 Actor의 모든 `UStaticMeshComponent`가 그 target의 형상이다. 설정(D3 부위 모드, D4 값 넷, D5 방식·관절 반지름)은 이 Actor 하나에 있다(계획서 Q-04). 손별 보류 기록은 target마다 따로 둔다(같은 손이 target마다 다른 결과를 낸다).<br>**화면(PC 창 `GEngine` 메시지, 매 프레임 덮어씀):** 맨 위에 모드·방식·`ContactDistanceMm`·`ReleaseMarginMm`·`DwellSeconds`·`TrackingGraceSeconds`·관절 반지름 켬/끔, 손별 추적 상태(`L tracked`/`L lost`). target마다 한 줄: 이름, 상태, A 최소 거리 mm(손별)과 가장 가까운 관절 이름, B 결과(손별), 이번 프레임 판정 비용(µs, 모든 target 합은 맨 위에).<br>**키(PIE·Link에서 키보드):** `M` 방식 A↔B, `1`/`2`/`3` 부위 모드, `=`/`-` `ContactDistanceMm` ±1 mm, `]`/`[` `DwellSeconds` ±0.05 s, `.`/`,` `ReleaseMarginMm` ±1 mm, `0`/`9` `TrackingGraceSeconds` ±0.05 s, `R` 관절 반지름 켬/끔(D5). 범위 밖으로 가지 않는다(D4).<br>**기록 파일을 만들지 않는다**(계획서 D-07). 숫자는 사용자가 화면에서 읽는다. `GEngine` 메시지는 헤드셋 화면에도 겹쳐 보일 수 있다 — 시험대에서만 쓰고, 진행자 창은 S4에서 따로 정한다 |
 | D8 | **게임 모드** | `AReachProbeGameMode`(기본 Pawn = `AReachHandPawn`). 추적 원점은 플랫폼 기본(UE 5.7 OpenXR = Stage, vBoR CLAUDE.md)을 바꾸지 않는다 |
 
 ## 2. 지켜야 할 조건
 
 - target mesh의 slot material·mesh·transform·collision 설정을 코드가 바꾸지 않는다. 바꾸는 것은 overlay material 하나뿐이다. `Touching`이 끝나면 overlay가 `nullptr`로 돌아가 원래 모습과 같다.
-- 판정 영역을 보이는 형상보다 키우지 않는다. 여유는 `ContactDistanceMm`(+ Hold의 `ReleaseMarginMm`)뿐이다.
+- 판정 영역을 보이는 형상보다 키우지 않는다. 여유는 `ContactDistanceMm`(+ Hold의 `ReleaseMarginMm`)뿐이다. 관절 반지름(D5)은 여유가 아니라 관절 중심 → 손 겉면 위치 보정이다(AGENTS.md).
 - 레이·원거리 잡기·잡기 없음. 손 모델은 보이기만 한다.
 - `Source/ReachStudy/Contact/`의 상태 규칙은 시험대(`Development/`)를 참조하지 않는다. S3가 그대로 쓴다.
 
@@ -57,13 +57,15 @@
 | E4 | `Touching` 중 거리 12 mm(Enter 밖, Hold 안) | 유지 |
 | E5 | `Touching` 중 거리 16 mm | 그 프레임에 `Idle`, overlay `nullptr` |
 | E6 | 경계 9 ↔ 11 mm를 프레임마다 오감 | `Touching` 뒤 계속 유지(깜빡임 없음) |
-| E7 | `Touching` 중 유일한 손 추적 끊김 1프레임(< `TrackingGraceSeconds`) → 복구 첫 프레임 → 그다음 Hold | 끊긴 프레임·복구 첫 프레임 모두 `Touching` 유지(보류), 바뀜 신호 없음 |
-| E7b | `Dwelling` 0.1 s 중 끊김 0.05 s → 복구 첫 프레임 → Enter 계속 | 끊긴 동안 dwell 0.1 그대로, 복구 첫 프레임 판정 안 함, 그다음 Enter 0.05 s로 `Touching` |
+| E7 | `Touching` 중 그 손 추적 끊김 1프레임 → 복구 첫 프레임(둘 합 < `TrackingGraceSeconds`) → 그다음 실측 Hold | 세 프레임 모두 `Touching` 유지, 바뀜 신호 없음 |
+| E7b | `Dwelling` 0.1 s 중 끊김 0.05 s → 복구 첫 프레임 → 실측 Enter 계속 | 끊긴 동안·복구 첫 프레임 dwell 0.1 그대로(멈춤), 그다음 실측 Enter 0.05 s로 `Touching` |
 | E7c | `Touching` 중 끊김이 `TrackingGraceSeconds`(0.1 s) 넘게 이어짐 | 넘는 프레임에 `Idle`, dwell 0 |
-| E7d | 왼손 `Touching` 중 왼손 끊김, 오른손은 추적되지만 멀리 있음 | 그 프레임에 `Idle`(판정할 손이 있으면 보류 없음) |
+| E7d | 왼손으로 `Touching` 중 왼손 끊김, 오른손은 추적되지만 멀리 있음(실측 None) | 왼손 보류 Hold로 `Touching` 유지. 0.1 s 넘으면 `Idle` (손마다 따로) |
+| E7e | 왼손 보류 Enter만 있고 오른손 실측 Enter | dwell은 오른손 실측으로 더해진다 |
+| E7f | 처음부터 추적 안 된 손(실측 없음) | 없음(None) — 보류할 결과가 없다 |
 | E8 | 왼손 `Touching` 중 왼손 떨어지고 오른손 Hold | 유지 |
 | E9 | 부위 모드 3종에서 쓰는 관절 수와 이름 | 1 / 5(엄지 끝 포함) / 26 |
-| E10 | `Fingertips`에서 손바닥만 표면에 닿음 | 안 닿음. `WholeHand`면 닿음 |
+| E10 | `Fingertips`에서 손바닥만 표면에 닿음 (A·B 둘 다) | 안 닿음. `WholeHand`면 닿음 |
 | E11 | A: convex 상자 밖 5 mm 점 | 5 mm (±0.1). 상자 안 점 = 0 |
 | E12 | A: complex만 있는 mesh(simple collision 없음) | `n/a`, Enter 없음 |
 | E13 | B: complex만 있는 mesh 표면 밖 5 mm 점, `ContactDistanceMm` 10 | enter |
@@ -71,7 +73,7 @@
 | E14 | B: complex만 있는 닫힌 mesh 안쪽, 표면에서 3 cm 들어간 점 | Enter·Hold 아님(표면만 검사 — 계획서 D-03 자료) |
 | E15 | collision이 꺼진 component | A `n/a`, B `no collision`, Enter·Hold 없음 |
 | E15b | 관절 반지름 켬, 반지름 8 mm, A 중심 거리 15 mm | A 7 mm → Enter |
-| E16 | 값 키 범위 끝 | `ContactDistanceMm` 0·50, `ReleaseMarginMm` 0·20, `DwellSeconds` 0·2에서 멈춤 |
+| E16 | 값 키 범위 끝 | `ContactDistanceMm` 0·50, `ReleaseMarginMm` 0·20, `DwellSeconds` 0·2, `TrackingGraceSeconds` 0·1에서 멈춤 |
 | E17 | overlay 복원 | `Touching` → `Idle` 뒤 slot material 배열이 시작 때와 같음, overlay `nullptr` |
 
 ## 5. 구현자가 정할 것
@@ -104,10 +106,11 @@
 - 무릎 옆 target: 고개를 돌리지 않았을 때 추적 상태(`lost`가 얼마나 뜨나).
 - 손을 표면 뒤로 깊이 넣었을 때 A(convex 안 = 0)와 B(빠짐) 차이 → 계획서 D-03 결정.
 - 관절 반지름 켬/끔(`R`): 손끝 반지름이 몇 mm로 오는지, 어느 쪽이 "손이 표면에 닿아 보이는 순간"과 색 바뀜이 잘 맞는지 → `ContactDistanceMm`의 의미 결정.
-- 손을 target에 댄 채 고개를 돌려 손이 잠깐 시야 밖으로 나갈 때 색이 깜빡이는지 → `TrackingGraceSeconds` 기본값.
+- 한 손을 무릎 옆 target에 댄 채 다른 손은 보이게 두고 고개를 돌려, 닿은 손이 잠깐 시야 밖으로 나갈 때 색이 깜빡이는지(`0`/`9`로 값 바꿔 가며) → `TrackingGraceSeconds` 기본값.
 - 판정 비용(µs) — 회사 CAD 조각에서.
 
 ## 개정 이력
 
 - 2026-11-22 — 초안 (Claude).
 - 2026-11-22 개정 1 (Claude 재검토, 구현 전): ① 방식 B를 sweep → complex 구 overlap(`FBodyInstance::OverlapTest` + `bTraceComplex`). sweep은 dwell 때문에 이득이 없고, 2 cm 튐 한계가 빠른 손 이동(90 Hz에서 2 m/s ≈ 2.2 cm/프레임)에서 깨짐. `OverlapComponent`는 complex를 보지 않아 제외. ② 추적 끊김을 즉시 `Idle` → `TrackingGraceSeconds` 보류(vBoR 원칙, 1프레임 끊김 깜빡임 방지). ③ `Build.cs` 모듈 의존 명시. ④ 관절 반지름 `HandKeyRadii` 켬/끔 비교. ⑤ overlay material을 vBoR 방식(ISDK GrabbableLit `ColorParam`)으로 확정. ⑥ CAD collision 꺼짐 처리, vBoR 경로를 로컬 절대경로로, Codex가 할 수 없는 레벨 확인을 완료 조건에서 분리.
+- 2026-11-22 개정 2 (Codex 질문 Q-02 + Claude 전체 대조): ① 계획서 §4·D-04·§5·§8·T-02, AGENTS.md를 이 명세와 맞춤. ② **D4 보류를 손별로** — 개정 1은 "판정할 손이 하나도 없을 때만" 보류라서, 닿은 손만 시야 밖으로 나가고 다른 손은 보이는 흔한 경우(무릎 옆 Door target)에 바로 `Idle`이 됐다. E7d 기대값 바뀜, E7e·E7f 추가. 복구 첫 프레임이 보류 시간에 들어감을 명시. ③ `TrackingGraceSeconds` 키 `0`/`9`, E16. ④ 관절 반지름은 여유가 아님(§2·AGENTS.md).
