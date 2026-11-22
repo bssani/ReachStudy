@@ -54,3 +54,62 @@
 - **D4 규칙이 바뀌었다 — 다시 읽을 것.** 대조하다 찾은 설계 구멍: 개정 1은 "판정할 손이 하나도 없을 때만" 보류여서, 닿은 손만 시야 밖으로 나가고 다른 손은 보이는 흔한 경우(무릎 옆 Door target)에 바로 `Idle`이 됐다. 이제 **손마다** 실측 / 보류(마지막 실측 결과, `TrackingGraceSeconds` 이하) / 없음으로 나눈다. E7·E7b 문구, **E7d 기대값 바뀜**(보류 Hold로 유지), E7e·E7f 추가.
 - 그 밖: `TrackingGraceSeconds` 키 `0`/`9`(D7), E16 범위, E10은 A·B 둘 다, 손별 보류 기록은 target마다(D7).
 - 명세 개정 이력 "개정 2"에 같은 내용이 있다. 열린 항목 없음 → 구현 시작.
+
+## Codex 구현 결과 — 2026-11-23
+
+명세 개정 2를 구현했다. Claude 코드 리뷰는 아직 받지 않았다.
+
+### ① 바뀐 파일
+
+- `Source/ReachStudy/Contact/ReachContact.h`: 엔진 의존 없는 상태 규칙. 손별 마지막 실측·유예 시간, 복구 첫 프레임 제외, dwell 멈춤·누적, Hold, 상태 변경 신호.
+- `Source/ReachStudy/Contact/ReachContactQuery.h`, `.cpp`: 부위·방식 enum, XR 원본 입력 검증·관절 선택·반지름 변환, Actor의 모든 static mesh에 A 거리/B complex overlap 비교, overlay 적용.
+- `Source/ReachStudy/Hand/ReachHandPawn.h`, `.cpp`: HMD Camera, 좌우 MotionController·ISDK 손 표시. ray·grab·poke 비활성, 입력 자동 바인딩 끔. 원본 관절은 XR API로 읽음.
+- `Source/ReachStudy/Development/ReachContactProbe.h`, `.cpp`: 공통 설정·키 조작, target별 상태, MID overlay, 화면 수치·가장 가까운 관절·반지름·비용. 손 입력과 프레임 처리를 분리해 같은 제품 함수에 시험 입력을 전달한다.
+- `Source/ReachStudy/Development/ReachProbeGameMode.h`, `.cpp`: 기본 Pawn 지정. 추적 원점은 변경하지 않음.
+- `Source/ReachStudy/Tests/ReachContactStateTests.cpp`, `ReachContactQueryTests.cpp`: 명세 §4 전체를 9개 자동화 시험으로 묶음. 엔진 Cube의 메모리 복제본·임시 world만 사용하고 에셋 파일은 만들지 않음.
+- `Source/ReachStudy/ReachStudy.Build.cs`: 명세의 네 모듈, collision shape용 `PhysicsCore`, 하위 폴더 헤더를 위한 모듈 루트 include 경로.
+- 이 리뷰 파일에 구현 보고 추가. git 무시 `HANDOFF.md`의 결과 갱신.
+
+### ② 완료 조건
+
+- **§4 전체: 충족.** `ReachStudy.*` 전체 1회, 시험 9개 모두 `Result={Success}`, 실패 0, `TEST COMPLETE. EXIT CODE: 0`, 프로세스 종료 코드 0.
+  - E1–E3: 짧은 접촉·dwell 임계·즉시 접촉·변경 신호 중복 없음.
+  - E4–E6·E8: 12 mm Hold·16 mm 이탈·9/11 mm 반복·다른 손 Hold.
+  - E7·E7b–E7f: 짧은 손실·복구 첫 프레임·dwell 멈춤·유예 초과·손별 독립 보류·다른 손 실측 Enter·실측 없는 손. 정확히 유예 시간일 때 유지도 확인.
+  - E9·E10: 1/5/26개와 관절 이름, 손바닥만 닿을 때 A/B 모두 부위 선택 적용. 추가로 잘못된 원본 추적·관절 누락·NaN·반지름 누락 확인.
+  - E11–E15b: 실제 collision에서 5 mm/안쪽 0, complex-only A 없음/B Enter·Hold·깊은 내부 없음, collision 꺼짐, 관절 반지름 보정.
+  - E16·E17: 모든 값 키 상하한, 방식·부위·반지름 키, 접촉/손실 유예/복구/이탈 overlay, slot material·mesh·transform·collision 보존.
+- **빌드: 충족.** 최종 non-unity(`-DisableUnity -Module=ReachStudy`), 기본 빌드, 실제 unity 모두 `Result: Succeeded`, 경고·오류 0. 초기 include 경로 누락과 메시지 키 overload 오류는 수정 후 재빌드했다.
+- **사용자 레벨·PIE: 미확인.** 명세대로 레벨·에셋을 만들지 않았다.
+- **보고 ①–⑤: 이 파일·HANDOFF·구현 커밋 본문에 기록.** Quest 3 T-02는 `not-tested`.
+
+### ③ 명세와 다르게 한 것과 이유
+
+- 동작·범위 변경 없음. 관절 공급 시험 방법은 §5 재량에 따라 `ReadSample`·`Query`·`ProcessFrame` 함수 인자로 분리했다. 제품 경로에 시험 분기는 없다.
+- 화면은 Actor별 고정 메시지 키 하나에 설정 헤더와 target별 줄을 매 프레임 덮어쓴다. 상태는 target마다 독립이다. 설정 키를 바꾸면 이전 설정의 판정·overlay를 초기화한다.
+- 작은 모듈의 기본 빌드가 개별 cpp로 컴파일되어 실제 unity 검증에는 git 무시 `Saved/UnrealBuildTool/BuildConfiguration.xml`에서 `bForceUnityBuild=true`, `bUseAdaptiveUnityBuild=false`를 잠시 적용했다. `Module.ReachStudy.cpp`에 제품·시험 cpp가 함께 포함된 것을 확인하고 설정은 원복했다.
+- 자동화 실행의 `-log=` 인자가 PowerShell에서 분리돼 실제 로그는 `Saved/Logs/ReachStudy.log`에 생성됐다. 같은 로그를 `S2-Automation.log`로 복사해 보존했다. 시험은 재실행하지 않았다.
+- 자동화 시작 시 ISDK의 `/OculusInteractionSamples/Widgets/InfoCardWidget` 누락 CDO 오류 2건, 헤드셋 미연결 경고·Meta 에셋 버전 경고가 있었다. 시험 구간 9개는 모두 성공했다. 샘플 플러그인을 추가하거나 원본 플러그인을 수정하지 않았다.
+- 자동화 시작 시 엔진이 자동 추가한 AndroidFileServer 설정은 작업 전 상태로 되돌렸다.
+
+### ④ 엔진·플러그인 API 근거
+
+다음은 로컬 파일을 직접 읽어 확인했다. 엔진 경로의 기준은 `C:/Program Files/Epic Games/UE_5.7/Engine/`이다.
+
+- XR 원본: `Plugins/Runtime/XRBase/Source/XRBase/Public/HeadMountedDisplayFunctionLibrary.h:352` (`GetHandTrackingState`), `Source/Runtime/HeadMountedDisplay/Public/HeadMountedDisplayTypes.h:260` (`EHandKeypoint`), `:290` (26개), `:421` (TrackingStatus), `:425` (위치), `:433` (반지름). 공급 경로도 `Plugins/Runtime/OpenXR/Source/OpenXRHMD/Private/OpenXRHMD.cpp:387`에서 확인.
+- MotionController: `Source/Runtime/HeadMountedDisplay/Public/MotionControllerComponent.h:32` (low-latency 옵션), `:52` (`SetTrackingMotionSource`).
+- 거리: `Source/Runtime/Engine/Classes/Components/PrimitiveComponent.h:2248` (`GetBodyInstance`), `:2271` (`GetSquaredDistanceToCollision`). `Source/Runtime/Engine/Private/PhysicsEngine/Experimental/PhysInterface_Chaos.cpp:1227` convex 필터·`:1259` 실패 처리도 확인.
+- complex overlap: `Source/Runtime/Engine/Classes/PhysicsEngine/BodyInstance.h:1151` (body 유효성), `:1342` (`OverlapTest`, 마지막 인자 `bTraceComplex`), `Source/Runtime/PhysicsCore/Public/CollisionShape.h:300` (`MakeSphere`). `PhysInterface_Chaos.cpp:1145` complex/simple 필터 및 `Source/Runtime/Engine/Private/PhysicsEngine/BodyInstance.cpp:4257` 전달 경로도 확인.
+- overlay: `Source/Runtime/Engine/Classes/Components/MeshComponent.h:56`, `Source/Runtime/Engine/Public/Materials/MaterialInstanceDynamic.h:109` (벡터 파라미터), `:176` (MID 생성).
+- 화면·키: `Source/Runtime/Engine/Classes/Engine/Engine.h:2138` (uint64 메시지 키), `:2150` (삭제), `Source/Runtime/Engine/Classes/Components/InputComponent.h:1030` (키를 전달하는 BindKey).
+- ISDK rig: 리포의 `Plugins/MetaXRInteraction/Source/OculusInteractionPrebuilts/Public/Rig/IsdkHandRigComponent.h:142,161`, 같은 폴더 `IsdkRigComponent.h:193,200,207,214,350`. grab 방식 차단: `Plugins/MetaXRInteraction/Source/OculusInteraction/Public/Interaction/IsdkGrabberComponent.h:200`.
+- material 경로: `Plugins/MetaXRInteraction/Source/OculusInteraction/Public/IsdkContentAssetPaths.h:137`. `ColorParam` 이름은 명세와 로컬 참고 코드 `C:/Git/vBoR/Source/vBoR/Interaction/VBoRAxisPart.cpp:665`를 대조했다. MID 생성·overlay 적용은 자동화에서 확인했지만 실제 표시 색은 아직 시각 확인하지 않았다.
+
+### ⑤ 로컬에서 확인할 것
+
+- 빌드 로그: `Saved/Logs/S2-NonUnity.log`, `S2-Unity.log`, `S2-Unity-Actual.log`. 자동화: `Saved/Logs/S2-Automation.log` (원본 `ReachStudy.log`). 모두 git 밖.
+- Claude: `main...codex/S2-contact-probe` 코드 리뷰. 이번 보고는 코드 리뷰 통과를 뜻하지 않는다.
+- 사용자: 명세 §6의 `L_S2_ContactProbe`·대상 배치, GameMode Override·query collision 설정, PIE 경고 확인. ISDK 샘플 위젯 누락도 사용자 실행 환경에서 확인.
+- 사용자: Quest 3 Link T-02 전체. 손 모델 표시와 ray/grab 없음, XR `bValid`·관절·반지름, 실제 overlay 색, A/B 비교, 부위 3종, dwell·경계·손별 유예·비용을 확인한다. 원본 손 관절이 오지 않으면 명세 D1대로 질문하며 플러그인을 임의로 추가하지 않는다.
+- Quest 결과로 방식·기본값·표면 뒤 처리 결정을 내려야 S2 단계가 끝난다. 현재 T-02 `not-tested`.
+- 로컬 커밋만 남긴다. push·PR·main 머지 없음.
