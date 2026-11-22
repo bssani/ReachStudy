@@ -69,3 +69,39 @@
 - 사용자 Quest 3 Link T-03 일부: 실제 손 poke로 절대 번호 전환, 중복 누름, limiter 손 모델, 원본 손 관절과 판정 독립성, 좌석에서 패널 위치·크기, 키보드 전환·접촉 초기화. 현 상태 `not-tested`.
 - T-02는 기존 S2 상태 그대로 `not-tested`. 판정 방식·기본값 결정은 실제 Quest 확인 뒤다.
 - 로컬 커밋만 남긴다. push·PR·main 머지 없음.
+
+## 코드 리뷰 1회차 — Claude 2026-11-23 (`73e3f49`) — 통과
+
+### 재현
+
+- non-unity(`-DisableUnity -Module=ReachStudy`): 소스 시간을 갱신해 6개 cpp를 다시 컴파일, `Result: Succeeded`, 경고·오류 0.
+- 실제 unity: 빌드 XML(`bForceUnityBuild`, `bUseAdaptiveUnityBuild=false`)을 잠시 넣고 `Module.ReachStudy.cpp` 컴파일 확인, `Succeeded`, 경고 0. XML은 원래대로 되돌림.
+- `ReachStudy.*` 16개(S2 9 + S4 7) 모두 `Success`, `EXIT CODE: 0`.
+- `StructUtils` 폐기 예정 메시지는 git 밖 `Plugins/McpAutomationBridge/McpAutomationBridge.uplugin:207`의 플러그인 의존에서 나온다. ReachStudy 코드·uproject와 무관한 환경 항목으로 본다(§7 무경고 조건은 ReachStudy 컴파일 기준으로 충족). Agent-Workflow 무시 목록에 적음.
+
+### 확인한 것
+
+- D2: 범위 검사 → 같은 번호 무시 → 적용 → 이벤트 한 번 순서(`ReachDoorVariants.cpp` `SelectVariant`). 토글 없음. 키·버튼 모두 `SelectVariant`.
+- D3: 원래 숨김·collision을 BeginPlay에서 한 번 기억하고 EndPlay에서 되돌림. `GetAttachedActors(Actors, false, true)`는 `bResetArray=false`라 목록 actor 자신이 남는다(`Actor.h:3558`). component 설정은 건드리지 않음 — 시험이 material·mesh·transform·response까지 확인.
+- D5: ISDK `Widget`은 생성자 기본 subobject라(`IsdkInteractableWidgetComponent.cpp:46`) 패널 BeginPlay의 `GetWidget()`가 null일 수 없다.
+- D7: poke만 삭제 목록에서 빠지고 ray·grab·grab 검출 세 종류는 그대로 꺼짐. limiter는 파생 rig 생성자에서 등록(vBoR과 같은 방식).
+- D8: 전환 → `ResetContacts`가 그 자리에서 overlay·상태·손 이력을 비움. 다음 첫 실측은 `Idle`(S2 D4), 그다음 `Touching` — 시험 E9가 프레임 단위로 확인. 꺼진 target은 질의 자체를 건너뜀.
+- 제품 코드(`Door/`, `Hand/`)에서 `Development/` 참조 없음. 주석·문구 영어.
+
+### 문제
+
+없음.
+
+### 제안 (머지를 막지 않음, S3 명세에서 같이 정리)
+
+- **S-1 Door가 3개 이상일 때 공유 actor 규칙.** `IsActorActive`는 `VariantIndices.Num() > 1`이면 언제나 활성이다. Door 2개에서는 명세 D3와 같지만, `C`·`V`로 3·4번 Door를 쓰면 A·B에만 있는 actor가 C 활성 때도 보인다. "활성 Door에 들어 있으면 활성"(`!State || State->VariantIndices.Contains(ActiveVariant)`)이 2개일 때 결과가 같고 3개 이상에서도 맞다. 명세 D3 문구("두 Door에 다 들어 있는")가 모호했던 탓이다 — Claude가 명세를 고친다.
+- **S-2 `InitialVariant`가 범위 밖일 때.** 경고는 나오지만 `ActiveVariant`가 `INDEX_NONE`이라 모든 Door actor가 보이고 collision도 켜진 채, 시험대는 그 target을 전부 `inactive`로 표시한다(보이는 것과 판정이 어긋남). 0으로 되돌리거나 모두 끄는 것 중 하나로 정한다.
+
+### 확인할 시험
+
+- §6 레벨 작업 뒤 PIE: `Z`/`X`로 `T_KneeSide`/`T_KneeSideB` 전환, 시험대 `inactive` 줄, 패널 버튼 색, 경고 없음 (Claude, MCP).
+- Quest 3 T-03 일부(명세 §8) — `not-tested`.
+
+### 다음
+
+사용자 승인 후 `main` 머지 → Claude가 명세 §6 레벨 작업(MCP).

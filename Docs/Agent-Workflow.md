@@ -63,7 +63,7 @@ UnrealEditor-Cmd.exe "C:\Git\ReachStudy\ReachStudy.uproject" -ExecCmds="Automati
 ### 2.5 맵 로드 확인
 
 - GUI 에디터로 맵을 연다(headless `-game -nullrhi`는 맵 로드 전 크래시로 판단 불가, vBoR 경험).
-- 무시해도 되는 로그: 프로파일러·태블릿 DLL 로드 실패, MetaXR Content `empty engine version`, 헤드셋 미연결 `xrGetSystem() failed`, OpenXR API 1.1 → 1.0 폴백.
+- 무시해도 되는 로그: 프로파일러·태블릿 DLL 로드 실패, MetaXR Content `empty engine version`, 헤드셋 미연결 `xrGetSystem() failed`, OpenXR API 1.1 → 1.0 폴백. ISDK 샘플 `/OculusInteractionSamples/Widgets/InfoCardWidget` 누락으로 `IsdkInfoCardComponent` CDO 오류 2건(샘플 플러그인은 쓰지 않음). 빌드: 로컬 MCP 플러그인의 `StructUtils` 폐기 예정 메시지(`McpAutomationBridge.uplugin`, git 밖).
 - Meta XR 설문 창이 모달로 떠 종료를 막는다. 에이전트는 대신 답하지 않고 강제 종료한 뒤 `git status`를 본다.
 
 ### 2.6 커밋·push
