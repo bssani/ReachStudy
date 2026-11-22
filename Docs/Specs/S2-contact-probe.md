@@ -34,14 +34,14 @@
 
 ## 2. 지켜야 할 조건
 
-- target mesh의 slot material·mesh·transform·collision 설정을 코드가 바꾸지 않는다. 바꾸는 것은 overlay material 하나뿐이다. `Touching`이 끝나면 overlay가 `nullptr`로 돌아가 원래 모습과 같다.
+- 시험대 코드는 target mesh의 slot material·mesh·transform·collision 설정을 바꾸지 않는다. 바꾸는 것은 overlay material 하나뿐이다. (S4부터 Door 전환 `AReachDoorVariants`가 꺼진 Door의 actor 단위 숨김·collision을 끄고 되돌린다 — 시험대가 아니다, S4 §2.) `Touching`이 끝나면 overlay가 `nullptr`로 돌아가 원래 모습과 같다.
 - 판정 영역을 보이는 형상보다 키우지 않는다. 여유는 `ContactDistanceMm`(+ Hold의 `ReleaseMarginMm`)뿐이다. 관절 반지름(D5)은 여유가 아니라 관절 중심 → 손 겉면 위치 보정이다(AGENTS.md).
-- 레이·원거리 잡기·잡기 없음. 손 모델은 보이기만 한다.
+- 레이·원거리 잡기·잡기 없음. 손 모델은 보이기만 한다. (S4부터 Door 전환 버튼용 poke와 poke limiter를 켠다 — 닿음 판정은 그대로 XR 원본 관절, S4 D7.)
 - `Source/ReachStudy/Contact/`의 상태 규칙은 시험대(`Development/`)를 참조하지 않는다. S3가 그대로 쓴다.
 
 ## 3. 범위 밖
 
-- `AReachTarget` 부모 클래스·BP 자식(S3), Door 전환·poke 버튼·진행자 창(S4), 정렬(S1), CAD import(S5).
+- `AReachTarget` 부모 클래스·BP 자식·진행자 창(S3), Door 전환·poke 버튼(S4), 정렬(S1), CAD import(S5).
 - 방식 C(mesh 삼각형으로 직접 거리 계산, CPU 접근 필요). A·B가 둘 다 실패하면 리뷰 파일 "질문"에 결과와 함께 적고 멈춘다.
 - target 표면 뒤로 깊이 들어간 손 처리(계획서 D-03). 이번에는 화면에 보이는 대로 둔다 — 사용자가 Quest에서 보고 정한다.
 
@@ -121,3 +121,4 @@
 - 2026-11-22 — 초안 (Claude).
 - 2026-11-22 개정 1 (Claude 재검토, 구현 전): ① 방식 B를 sweep → complex 구 overlap(`FBodyInstance::OverlapTest` + `bTraceComplex`). sweep은 dwell 때문에 이득이 없고, 2 cm 튐 한계가 빠른 손 이동(90 Hz에서 2 m/s ≈ 2.2 cm/프레임)에서 깨짐. `OverlapComponent`는 complex를 보지 않아 제외. ② 추적 끊김을 즉시 `Idle` → `TrackingGraceSeconds` 보류(vBoR 원칙, 1프레임 끊김 깜빡임 방지). ③ `Build.cs` 모듈 의존 명시. ④ 관절 반지름 `HandKeyRadii` 켬/끔 비교. ⑤ overlay material을 vBoR 방식(ISDK GrabbableLit `ColorParam`)으로 확정. ⑥ CAD collision 꺼짐 처리, vBoR 경로를 로컬 절대경로로, Codex가 할 수 없는 레벨 확인을 완료 조건에서 분리.
 - 2026-11-22 개정 2 (Codex 질문 Q-02 + Claude 전체 대조): ① 계획서 §4·D-04·§5·§8·T-02, AGENTS.md를 이 명세와 맞춤. ② **D4 보류를 손별로** — 개정 1은 "판정할 손이 하나도 없을 때만" 보류라서, 닿은 손만 시야 밖으로 나가고 다른 손은 보이는 흔한 경우(무릎 옆 Door target)에 바로 `Idle`이 됐다. E7d 기대값 바뀜, E7e·E7f 추가. 복구 첫 프레임이 보류 시간에 들어감을 명시. ③ `TrackingGraceSeconds` 키 `0`/`9`, E16. ④ 관절 반지름은 여유가 아님(§2·AGENTS.md).
+- 2026-11-23 개정 3 (S4 명세와 맞춤, 동작 변경 없음): §2 collision·손 모델 문장에 S4의 Door 전환·poke를 괄호로 적음, §3 진행자 창 S4 → S3.

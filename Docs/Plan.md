@@ -32,7 +32,7 @@
 | Q-03 | `Fingertips` = 다섯 손가락 끝(`ThumbTip`·`IndexTip`·`MiddleTip`·`RingTip`·`LittleTip`). `WholeHand` = 손 관절 전부(`EHandKeypoint` 26개) |
 | Q-04 | (제안대로) 설정 D-02~D-04는 레벨에 하나 두는 설정 Actor에 모은다. target별 덮어쓰기 없음 |
 | Q-05 | **3D 버튼은 참가자가 누른다.** Door·IP 밖의 빈 공간(예: 조수석 쪽)에 둔다. 버튼은 판정 대상이 아니다 |
-| Q-06 | 진행자 PC 창: 현재 Door(A/B), 정렬 상태, 지금 닿아 있는 target 이름, 좌·우 손 추적 상태. 텍스트만 |
+| Q-06 | 진행자 PC 창: 현재 Door(A/B), 정렬 상태, 지금 닿아 있는 target 이름, 좌·우 손 추적 상태. 텍스트만. **S3에서 만든다**(닿은 target은 `AReachTarget`이 있어야 제품 코드에서 읽을 수 있음, S4 명세 머리) |
 
 ## 4. 허용 거리·dwell 권장 기본값
 
@@ -56,8 +56,8 @@
 | `AReachTarget` (C++) → `BP_ReachTarget_<Name>` | target mesh 하나. 상태 `Idle` / `Dwelling` / `Touching`. Touching이면 overlay material을 켜고(slot material은 건드리지 않음, S2 D6), Idle로 돌아가면 끈다. 이벤트 `OnTouchBegin` / `OnTouchEnd`. BP에서는 mesh와 닿음 material만 정한다 |
 | 손 관절 읽기 | XR 원본 관절 위치(`GetHandTrackingState`, vBoR `AVBoRHandRigPawn::ReadRawIndexTip`과 같은 경로, S2 D2). 추적 끊김 = 그 프레임 판정 안 함, 결과는 보류(§4) |
 | 닿음 판정 | 관절점마다 target 형상과의 닿음. 방식 A(simple collision까지 거리) / B(complex collision 구 overlap, 거리 값 없음) 중 하나를 **S2 결과로 정한다** |
-| `AReachVariantSet` (C++) | Door A·Door B 각각의 Actor 목록. 활성 Door만 visible·collision·판정. 전환하면 모든 target 초기화(D-08). IP는 이 목록에 없다 |
-| 진행자 입력 | 키보드(키 배치는 S4 명세) + **참가자가 누르는** 3D widget poke 버튼(Q-05). vBoR `BP_LightPanel`(widget poke) 방식 |
+| `AReachDoorVariants` (C++) | Door A·Door B 각각의 Actor 목록(붙은 자식 actor 포함). 활성 Door만 보이고 collision이 켜진다 — actor 단위 숨김·collision만 바꾸고 원래 값으로 되돌린다. 전환하면 모든 target 초기화(D-08). IP는 이 목록에 없다. [S4 명세](Specs/S4-door-switch.md) |
+| Door 전환 입력 | 진행자 키보드(`Z`·`X`) + **참가자가 누르는** 3D widget poke 버튼(Q-05, vBoR `BP_LightPanel` 방식). 둘 다 같은 명령 `SelectVariant(번호)` (S4) |
 | 정렬 | vBoR Calibration 플러그인(Q-01). 운전석 하나, 시나리오·좌석 전환 없음 |
 
 ## 6. 단계
@@ -67,8 +67,8 @@
 | **S0** | 프로젝트 부트스트랩 | 빈 C++ 프로젝트, 규칙 문서, Meta 플러그인 복사, git·GitHub | **완료 2026-11-22** (Claude). 빌드 결과는 개정 이력 |
 | **S1** | 정렬 가져오기 | vBoR Calibration 플러그인을 넣는다(Q-01, 플러그인 추출 뒤). 마커 기록·저장·재시작 복원, 앵커 옵션(D-01) | 자동화 시험 통과, Quest에서 마커 정렬 → 재시작 복원 (T-01) |
 | **S2** | 닿음 판정 spike | [명세](Specs/S2-contact-probe.md). 손 Pawn, 관절 읽기, 상태 규칙(순수 구조체), 거리 방식 A/B 비교 시험대 | Quest 실측 기록, 방식·기본값 결정 (T-02). 정렬 없이 |
-| **S3** | `AReachTarget` | S2 결과로 판정·상태·material 전환, 설정(D-02~D-04, Q-04) | 자동화 시험: 진입·dwell·이탈·히스테리시스·추적 끊김·부위 모드 3종 |
-| **S4** | Door 전환 + 진행자 | `AReachVariantSet`, 키보드·3D 버튼, 진행자 창 텍스트(Q-06) | 자동화 시험: 비활성 Door target 판정 안 됨, 전환 시 초기화, 동시 입력 |
+| **S3** | `AReachTarget` + 진행자 창 | S2 결과로 판정·상태·material 전환, 설정(D-02~D-04, Q-04). 진행자 PC 창 텍스트(Q-06, S4에서 옮김) | 자동화 시험: 진입·dwell·이탈·히스테리시스·추적 끊김·부위 모드 3종, Door 전환 초기화 |
+| **S4** | Door 전환 | [명세](Specs/S4-door-switch.md). `AReachDoorVariants`, 키보드·3D 버튼 패널, 손 Pawn poke 켜기, S2 시험대 연결 | 자동화 시험: 비활성 Door target 판정 안 됨, 전환 시 초기화, 동시 입력. 레벨은 Claude가 MCP로 |
 | **S5** | Main 통합 | CAD Datasmith import(`Content/CAD/`, git 밖), target BP 배치, `L_Main` | Quest 전체 흐름 (T-03) |
 
 ## 7. 시험 (Quest 3, 상태는 전부 `not-tested`)
@@ -91,3 +91,4 @@
 - 2026-11-22 — 초안. 사용자 답 D-01~D-12 반영, Q-01~Q-06 열림.
 - 2026-11-22 — Q-01·Q-03·Q-05·Q-06 사용자 답 반영. D-02 `Fingers` → `Fingertips`(다섯 손가락 끝). D-03 "표면 안쪽 언제나 닿음"은 Claude가 근거 없이 넣은 것이라 빼고 S2에서 정함(엔진 거리 함수가 오목 형상을 지원하지 않음, S2 §0). S2 명세 작성.
 - 2026-11-22 — S2 명세 개정 1·2와 맞춤(Codex 질문 S2 Q-02): §4 추적 끊김 = 손별 보류(`TrackingGraceSeconds`), D-04 dwell 멈춤, D-03 관절 중심/겉면은 S2, §5 overlay·방식 A/B 표기, T-02·§8 문구.
+- 2026-11-23 — S4 명세 작성. `AReachVariantSet` → `AReachDoorVariants`, Door 전환 키 `Z`·`X`, 명령 `SelectVariant`. 진행자 PC 창(Q-06)을 S4 → S3로 옮김.
