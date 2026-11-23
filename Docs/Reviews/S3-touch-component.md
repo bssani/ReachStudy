@@ -93,3 +93,35 @@ ColorParam은 S2의 `Development/ReachContactProbe.cpp:62`와 같은 material pa
 ## 리뷰
 
 Claude 리뷰 대기. 이 보고는 리뷰 통과 판정이 아니다.
+
+## 코드 리뷰 1회차 — Claude 2026-11-24 (`6fcc221`) — 통과, 머지 가능
+
+### 재현
+
+- non-unity(`-DisableUnity -Module=ReachStudy`, 모듈 cpp 전부 건드려 다시 컴파일): Succeeded, 경고·오류 0.
+- 실제 unity(`Module.ReachStudy.cpp`, git 무시 빌드 XML 잠시 적용 → 원래 바이트로 되돌림, `cmp` 같음): Succeeded, 경고·오류 0.
+- `ReachStudy.*` 33개(S2 9 + S4 11 + S4b 4 + S3 9) Success, `TEST COMPLETE. EXIT CODE: 0`, 프로세스 종료 0.
+- 소스 전체 `DrawDebug|AddOnScreenDebugMessage|AddToViewport|PrintString|DrawText|TextRender` 0건.
+
+### 확인한 것
+
+- `Query(actor)`를 `QueryComponent` 합치기로 바꾼 것: 조건 순서 `None < Hold < Enter`이고 거리가 짧을수록 조건이 강하므로 mesh별 최대값 = 예전 "전체 최소 거리로 판정"과 같다. Complex도 예전 "Enter 하나라도 → Enter, 아니면 Hold"와 같다. E13이 확인.
+- overlay를 매 프레임 넣는 것: `UMeshComponent::SetOverlayMaterial`은 같은 값이면 아무것도 하지 않는다(`Engine/Private/Components/MeshComponent.cpp:318`) — 비용 문제 없음.
+- 넓은 거르기: 패딩을 double로, 그리기 상자 + body 상자. E12가 격자 점·경계·큰 simple collision·반지름 켬/끔에서 거르기 켬/끔 결과가 같음을 확인 — 결과를 바꾸지 않는 거르기 조건을 지킨다.
+- 이벤트: 모든 component 갱신 뒤 보냄, 처리기가 component를 지우거나 Door를 바꾸면 변경 번호로 오래된 이벤트를 건너뜀(E11). Door 전환 때 Touching이던 것만 `OnTouchEnd` 한 번(D8).
+- 같은 mesh에 둘째 component는 경고 + 등록 거부, 거부된 component의 EndPlay가 첫째의 overlay를 끄지 않는다.
+- 에디터 world에는 subsystem이 없다. 설정·Pawn 경고는 target이 있는 world에서만, 로그로만.
+
+### 문제
+
+- 없음.
+
+### 메모 (머지를 막지 않음)
+
+- N-1 touch component가 붙은 mesh의 overlay material은 S3가 소유한다 — 닿지 않은 동안 매 프레임 `nullptr`로 둔다. 디자이너가 그 mesh에 따로 overlay를 넣으면 지워진다. CAD mesh에는 보통 없으므로 지금은 그대로, S5에서 기억할 것.
+- N-2 설정 actor는 target이 있는 첫 프레임에 한 번 찾는다. 레벨에 놓는 방식(Q-04)이라 문제없다. 게임 중 새로 만든 설정 actor는 보지 않는다.
+- N-3 ③에 명세에 없던 처리와 첫 실패·고친 이유를 적은 것 — 좋음.
+
+### 다음
+
+- 사용자 승인 뒤 `main` 머지·push → Claude MCP S4 §6·S3 §6 에디터 작업 → 사용자 Quest(T-02·T-03, S4b §7, S3 §8).
