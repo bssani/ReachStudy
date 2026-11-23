@@ -141,7 +141,7 @@
 - Core/Public/Windows/WindowsPlatformTime.h:23: Seconds(), QueryPerformanceCounter 기반 double 시각.
 - Engine/Classes/GameFramework/Actor.h:1925,1929,1933,3558,4521: actor 숨김·collision·재귀 부착 actor·원래 숨김 값.
 - UMG/Public/Components/Button.h:129: SetBackgroundColor; TextBlock.h:114: SetColorAndOpacity; HorizontalBoxSlot.h:58,63: 가운데 정렬.
-- Core/Public/Internationalization/Text.h:411,674: AsNumber(int32), Format; SlateCore/Public/Styling/SlateColor.h:62: FLinearColor 변환.
+- Core/Public/Internationalization/Text.h:411,676: AsNumber(int32), Format; SlateCore/Public/Styling/SlateColor.h:62: FLinearColor 변환.
 - Plugins/MetaXRInteraction/Source/OculusInteractionPrebuilts/Public/IsdkInteractableWidgetComponent.h:57,209,230,237,244,251: 기존 패널의 widget/poke/ray/DrawSize/WidgetScale/WidgetClass. 이번 변경은 새 플러그인 API를 더하지 않음.
 
 ⑤ 로컬에서 확인할 것
