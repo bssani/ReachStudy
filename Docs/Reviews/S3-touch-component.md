@@ -125,3 +125,11 @@ Claude 리뷰 대기. 이 보고는 리뷰 통과 판정이 아니다.
 ### 다음
 
 - 사용자 승인 뒤 `main` 머지·push → Claude MCP S4 §6·S3 §6 에디터 작업 → 사용자 Quest(T-02·T-03, S4b §7, S3 §8).
+
+## §6 에디터 작업 — Claude MCP 2026-11-24
+
+- 새 레벨 `Content/Development/S3/L_S3_Touch`: Sun·Sky·Floor·`SeatStart`(원점), GameMode override `AReachGameMode`.
+- `BP_TestDoorA`(Cube 3개, 2개에 `ReachTouchComponent`), `BP_TestDoorB`(4개, 3개), `BP_TestIP`(2개, 2개 — `IP_Right`는 `TouchMaterial` = `MI_S3_TouchBlue`, 부모 `/OculusInteraction/Materials/GrabbableLit` `ColorParam` 파랑). Cube 8 cm, Door는 왼쪽(y −45·−48), IP는 앞(x 55).
+- `TouchSettings`(기본값, `DoorVariants` 연결), `DoorVariants`(Door A {DoorA}, Door B {DoorB}), `DoorPanel`(C++ `AReachDoorPanel` — S4 리뷰 §6 F-1 때문에 BP 아님).
+- PIE: Pawn `ReachHandPawn`(Game class `ReachGameMode`), `Screen messages disabled (S4b)`, S3 경고 없음(설정·Pawn·부모 mesh). 키 `X`·`Z`·`N`·`B`로 DoorA/DoorB 숨김이 바뀌고 IP는 그대로. 스크린샷으로 배치 확인.
+- 손 닿음·색 바뀜은 헤드셋 없이 볼 수 없다 — Quest 3(§8, T-02) `not-tested`.

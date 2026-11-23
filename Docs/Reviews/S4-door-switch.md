@@ -181,3 +181,10 @@
 ### 다음
 
 - 사용자 승인 뒤 `main` 머지·push → Claude MCP §6 에디터 작업 → S4b·S3 명세를 `main`에 넣고 HANDOFF를 S4b로.
+
+## §6 에디터 작업 — Claude MCP 2026-11-24 (`main@b23e9fd` 위)
+
+- `L_S2_ContactProbe`에 `T_KneeSideB`(Cube, (25, −45, 60), 0.1), `DoorVariants`(Door A {`T_KneeSide`}, Door B {`T_KneeSideB`}), `DoorPanel`((30, 48, 75), yaw −122, 좌석을 봄). 시험대 `Targets`에 `T_KneeSideB`, `DoorVariants` 연결.
+- PIE: 키 `X`·`Z`·`N`·`N`·`B` 순서로 A/B 숨김이 매번 맞게 바뀜(속성 읽기). 패널에 `[<] Door A (1/2) [>]`·`Door B (2/2)` 보임(스크린샷). 경고: 헤드셋 없음 `LogHMD` 잡음과 Meta Project Setup Tool 환경 오류 2줄만(우리 코드 아님).
+- **명세와 다름 — `BP_DoorPanel` 대신 C++ `AReachDoorPanel`을 바로 놓음.** BP 자식을 놓으면 엔진 ensure `Template Mismatch during attachment`(`SceneComponent.cpp:2377`)가 나고, ISDK `UIsdkInteractableWidgetComponent` 생성자가 만든 하위 component 3개(`Selected Hovered Audio`·`Selected Empty Audio`·**`Widget Component`**, `IsdkInteractableWidgetComponent.cpp:38-48`)가 인스턴스가 아니라 CDO의 `DoorWidget`에 붙는다(MCP `get_components`로 확인, attachParent 없음). 보이는 위젯이 엉뚱한 곳에 그려질 수 있다. C++ actor는 셋 다 `DoorWidget`에 붙는다(확인). vBoR P4f에서 같은 원인(생성자 중첩 `SetupAttachment`)을 `PreRegisterAllComponents`에서 다시 붙여 고쳤다(`vBoR/Source/vBoR/Interaction/VBoRPawn.cpp:17-26`). 만든 `BP_DoorPanel`은 커밋 전에 지웠다.
+- **F-1 (Codex, 작음):** `AReachDoorPanel::PreRegisterAllComponents`에서 위 3개가 등록 전이면 `InteractableWidget`에 다시 `SetupAttachment` — BP 자식 패널을 쓰려면 필요. 시험: BP 자식 인스턴스에서 세 component의 AttachParent == 인스턴스 `DoorWidget`. 지금은 C++ actor로 충분하므로 사용자가 필요할 때.
