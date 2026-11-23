@@ -31,7 +31,7 @@ namespace
 struct FDoorWorld
 {
     UWorld* World;
-    AReachDoorVariants* Doors;
+    AReachDoorTestVariants* Doors;
     AActor* A;
     AActor* B;
     AActor* IP;
@@ -48,7 +48,7 @@ struct FDoorWorld
         A = Actor();
         B = Actor();
         IP = Actor();
-        Doors = World->SpawnActor<AReachDoorVariants>();
+        Doors = World->SpawnActor<AReachDoorTestVariants>();
         FReachDoorVariant First;
         First.Name = FText::FromString(TEXT("Door A"));
         First.Actors.Add(A);
@@ -167,7 +167,9 @@ bool FReachDoorRestoreTest::RunTest(const FString& Parameters)
         UStaticMesh* OriginalMesh = Mesh->GetStaticMesh();
         const FTransform Transform = Mesh->GetComponentTransform();
         const FCollisionResponseContainer Responses = Mesh->GetCollisionResponseToChannels();
+        AddExpectedMessage(TEXT("Actor belongs to multiple door variants"), EAutomationExpectedMessageFlags::Contains, 1);
         F.Doors->DispatchBeginPlay();
+        TestTrue(TEXT("E6: shared actor initially active"), F.Doors->IsActorActive(Shared) && !Shared->IsHidden() && Shared->GetActorEnableCollision());
         F.Doors->SelectVariant(1);
         TestEqual(TEXT("E5: grandchild hidden only with recursion"), Grandchild->IsHidden(), bInclude);
         TestEqual(TEXT("E5: grandchild collision follows recursion"), Grandchild->GetActorEnableCollision(), !bInclude);
@@ -191,6 +193,58 @@ bool FReachDoorRestoreTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("E7: EndPlay restores hidden B"), F.B->IsHidden() && !F.B->GetActorEnableCollision());
         TestTrue(TEXT("E7: EndPlay restores grandchild"), !Grandchild->IsHidden() && Grandchild->GetActorEnableCollision());
         TestTrue(TEXT("IP unchanged through shutdown"), !F.IP->IsHidden() && F.IP->GetActorEnableCollision());
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FReachDoorInitialTest, "ReachStudy.S4.E4b_InitialFallback", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FReachDoorInitialTest::RunTest(const FString& Parameters)
+{
+    for (int32 Initial : {-1, 5})
+    {
+        FDoorWorld F;
+        F.Doors->InitialVariant = Initial;
+        UReachDoorTestObserver* Events = NewObject<UReachDoorTestObserver>();
+        F.Doors->OnVariantChanged.AddDynamic(Events, &UReachDoorTestObserver::Record);
+        TestEqual(TEXT("E4b: pre-BeginPlay panel sees fallback"), F.Doors->GetActiveVariant(), 0);
+        AddExpectedMessage(TEXT("Invalid door variant index"), EAutomationExpectedMessageFlags::Contains, 1);
+        F.Doors->DispatchBeginPlay();
+        TestEqual(TEXT("E4b: invalid initial falls back to zero"), F.Doors->GetActiveVariant(), 0);
+        TestTrue(TEXT("E4b: A restored and B disabled"), !F.A->IsHidden() && F.A->GetActorEnableCollision() && F.B->IsHidden() && !F.B->GetActorEnableCollision());
+        TestEqual(TEXT("E4b: no startup event"), Events->Count, 0);
+    }
+    FDoorWorld Empty;
+    Empty.Doors->Variants.Reset();
+    UReachDoorTestObserver* Events = NewObject<UReachDoorTestObserver>();
+    Empty.Doors->OnVariantChanged.AddDynamic(Events, &UReachDoorTestObserver::Record);
+    AddExpectedMessage(TEXT("Invalid door variant index"), EAutomationExpectedMessageFlags::Contains, 1);
+    Empty.Doors->DispatchBeginPlay();
+    Empty.Doors->SelectNext();
+    Empty.Doors->SelectPrevious();
+    TestEqual(TEXT("E4b: no active empty variant"), Empty.Doors->GetActiveVariant(), INDEX_NONE);
+    TestEqual(TEXT("E4b: empty has no events"), Events->Count, 0);
+    TestTrue(TEXT("E4b: empty leaves actors unchanged"), !Empty.A->IsHidden() && Empty.A->GetActorEnableCollision() && !Empty.B->IsHidden() && Empty.B->GetActorEnableCollision());
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FReachDoorSharedTest, "ReachStudy.S4.E6_ThreeDoorSharedActor", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FReachDoorSharedTest::RunTest(const FString& Parameters)
+{
+    FDoorWorld F;
+    F.Doors->Variants.AddDefaulted();
+    AActor* Shared = F.Actor();
+    F.Doors->Variants[0].Actors.Add(Shared);
+    F.Doors->Variants[0].Actors.Add(Shared);
+    F.Doors->Variants[1].Actors.Add(Shared);
+    AddExpectedMessage(TEXT("Actor belongs to multiple door variants"), EAutomationExpectedMessageFlags::Contains, 1);
+    F.Doors->DispatchBeginPlay();
+    for (int32 Index : {0, 1, 2, 0})
+    {
+        F.Doors->SelectVariant(Index);
+        const bool bActive = Index != 2;
+        TestEqual(TEXT("E6: membership follows active door"), F.Doors->IsActorActive(Shared), bActive);
+        TestEqual(TEXT("E6: shared visibility follows active door"), !Shared->IsHidden(), bActive);
+        TestEqual(TEXT("E6: shared collision follows active door"), Shared->GetActorEnableCollision(), bActive);
     }
     return true;
 }
@@ -270,27 +324,38 @@ bool FReachDoorWidgetTest::RunTest(const FString& Parameters)
     const TSharedRef<SWidget> Slate = Widget->TakeWidget();
     UHorizontalBox* Row = Cast<UHorizontalBox>(Widget->GetRootWidget());
     if (!TestNotNull(TEXT("Horizontal button row"), Row)) { return false; }
-    TestEqual(TEXT("One button per variant"), Row->GetChildrenCount(), 2);
-    UButton* Button0 = Cast<UButton>(Row->GetChildAt(0));
-    UButton* Button1 = Cast<UButton>(Row->GetChildAt(1));
-    if (!TestNotNull(TEXT("First button"), Button0) || !TestNotNull(TEXT("Second button"), Button1)) { return false; }
-    TestTrue(TEXT("Button label from variant"), CastChecked<UTextBlock>(Button1->GetContent())->GetText().ToString() == TEXT("Door B"));
-    Button1->OnClicked.Broadcast();
-    TestEqual(TEXT("E14: button selects absolute index"), F.Doors->GetActiveVariant(), 1);
-    TestTrue(TEXT("E14: active button color"), Button1->GetBackgroundColor() == Widget->ActiveColor);
-    TestTrue(TEXT("E14: idle button color"), Button0->GetBackgroundColor() == Widget->IdleColor);
-    Button1->OnClicked.Broadcast();
-    TestEqual(TEXT("Same button no duplicate event"), Events->Count, 1);
+    TestEqual(TEXT("Previous, label, next row"), Row->GetChildrenCount(), 3);
+    UButton* Previous = Cast<UButton>(Row->GetChildAt(0));
+    UTextBlock* Label = Cast<UTextBlock>(Row->GetChildAt(1));
+    UButton* Next = Cast<UButton>(Row->GetChildAt(2));
+    if (!TestNotNull(TEXT("Previous button"), Previous) || !TestNotNull(TEXT("Current door label"), Label) || !TestNotNull(TEXT("Next button"), Next)) { return false; }
+    TestEqual(TEXT("Previous button text"), CastChecked<UTextBlock>(Previous->GetContent())->GetText().ToString(), FString(TEXT("<")));
+    TestEqual(TEXT("Next button text"), CastChecked<UTextBlock>(Next->GetContent())->GetText().ToString(), FString(TEXT(">")));
+    TestEqual(TEXT("Initial label"), Label->GetText().ToString(), FString(TEXT("Door A (1/2)")));
+    Next->OnClicked.Broadcast();
+    TestEqual(TEXT("E14: next button selects B"), F.Doors->GetActiveVariant(), 1);
+    TestEqual(TEXT("E14: next button refreshes label"), Label->GetText().ToString(), FString(TEXT("Door B (2/2)")));
+    Next->OnClicked.Broadcast();
+    Previous->OnClicked.Broadcast();
+    TestEqual(TEXT("Cooldown ignores either button"), Events->Count, 1);
+    TestTrue(TEXT("Navigation colors do not depend on selection"), Previous->GetBackgroundColor() == Widget->ButtonColor && Next->GetBackgroundColor() == Widget->ButtonColor);
     F.Doors->HandleKey(EKeys::C);
     F.Doors->HandleKey(EKeys::V);
     TestEqual(TEXT("E12: missing C/V variants ignored"), Events->Count, 1);
     F.Doors->HandleKey(EKeys::Z);
-    TestEqual(TEXT("E12: Z selects zero"), F.Doors->GetActiveVariant(), 0);
-    TestTrue(TEXT("Keyboard event refreshes color"), Button0->GetBackgroundColor() == Widget->ActiveColor);
+    TestEqual(TEXT("E12: Z selects zero during cooldown"), F.Doors->GetActiveVariant(), 0);
+    TestEqual(TEXT("E14: keyboard refreshes label"), Label->GetText().ToString(), FString(TEXT("Door A (1/2)")));
     F.Doors->HandleKey(EKeys::X);
-    Button0->OnClicked.Broadcast();
-    TestEqual(TEXT("E13: last input wins"), F.Doors->GetActiveVariant(), 0);
-    TestEqual(TEXT("E13: events only for actual changes"), Events->Count, 4);
+    TestEqual(TEXT("E12: X selects one"), F.Doors->GetActiveVariant(), 1);
+    F.Doors->NowSeconds += 0.5;
+    F.Doors->HandleKey(EKeys::N);
+    TestEqual(TEXT("E12: N selects next with wrap"), F.Doors->GetActiveVariant(), 0);
+    F.Doors->NowSeconds += 0.5;
+    F.Doors->HandleKey(EKeys::B);
+    TestEqual(TEXT("E12: B selects previous with wrap"), F.Doors->GetActiveVariant(), 1);
+    F.Doors->NowSeconds += 0.5;
+    Previous->OnClicked.Broadcast();
+    TestEqual(TEXT("E14: previous button selects A"), F.Doors->GetActiveVariant(), 0);
     FDoorWorld Four;
     Four.Doors->Variants.AddDefaulted(2);
     Four.Doors->DispatchBeginPlay();
@@ -298,6 +363,95 @@ bool FReachDoorWidgetTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("C selects existing index 2"), Four.Doors->GetActiveVariant(), 2);
     Four.Doors->HandleKey(EKeys::V);
     TestEqual(TEXT("V selects existing index 3"), Four.Doors->GetActiveVariant(), 3);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FReachDoorCooldownTest, "ReachStudy.S4.E13_E13d_RelativeCooldown", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FReachDoorCooldownTest::RunTest(const FString& Parameters)
+{
+    FDoorWorld F;
+    TestEqual(TEXT("Default cooldown in s"), F.Doors->SwitchCooldownSeconds, 0.5);
+    UReachDoorTestObserver* Events = NewObject<UReachDoorTestObserver>();
+    F.Doors->OnVariantChanged.AddDynamic(Events, &UReachDoorTestObserver::Record);
+    F.Doors->DispatchBeginPlay();
+    F.Doors->SelectNext();
+    TestEqual(TEXT("E13: startup does not start cooldown"), F.Doors->GetActiveVariant(), 1);
+    F.Doors->NowSeconds = 100.2;
+    F.Doors->SelectNext();
+    F.Doors->SelectPrevious();
+    TestEqual(TEXT("E13: relative commands blocked at 0.2 s"), Events->Count, 1);
+    F.Doors->NowSeconds = 100.6;
+    F.Doors->SelectNext();
+    TestEqual(TEXT("E13: wraps after 0.6 s"), F.Doors->GetActiveVariant(), 0);
+    TestEqual(TEXT("E13: two actual change events"), Events->Count, 2);
+    F.Doors->SelectVariant(1);
+    TestEqual(TEXT("E13c: absolute command bypasses cooldown"), F.Doors->GetActiveVariant(), 1);
+    F.Doors->NowSeconds = 100.8;
+    F.Doors->SelectVariant(1);
+    F.Doors->NowSeconds = 101.1;
+    F.Doors->SelectPrevious();
+    TestEqual(TEXT("Exact 0.5 s boundary accepted; unchanged command did not extend cooldown"), F.Doors->GetActiveVariant(), 0);
+    F.Doors->SwitchCooldownSeconds = 0.0;
+    F.Doors->SelectNext();
+    F.Doors->SelectPrevious();
+    TestEqual(TEXT("Zero cooldown accepts both relative commands"), Events->Count, 6);
+
+    FDoorWorld Three;
+    Three.Doors->Variants.AddDefaulted();
+    Three.Doors->DispatchBeginPlay();
+    Three.Doors->SelectPrevious();
+    TestEqual(TEXT("E13d: previous wraps zero to two"), Three.Doors->GetActiveVariant(), 2);
+    Three.Doors->NowSeconds += 0.5;
+    Three.Doors->SelectNext();
+    TestEqual(TEXT("E13d: next wraps two to zero"), Three.Doors->GetActiveVariant(), 0);
+    Three.Doors->NowSeconds += 0.5;
+    Three.Doors->SelectNext();
+    TestEqual(TEXT("Three doors: next advances one"), Three.Doors->GetActiveVariant(), 1);
+    Three.Doors->NowSeconds += 0.5;
+    Three.Doors->SelectPrevious();
+    TestEqual(TEXT("Three doors: previous retreats one"), Three.Doors->GetActiveVariant(), 0);
+
+    FDoorWorld One;
+    One.Doors->Variants.SetNum(1);
+    One.Doors->DispatchBeginPlay();
+    UReachDoorTestObserver* OneEvents = NewObject<UReachDoorTestObserver>();
+    One.Doors->OnVariantChanged.AddDynamic(OneEvents, &UReachDoorTestObserver::Record);
+    UReachDoorPanelWidget* Widget = CreateWidget<UReachDoorPanelWidget>(One.World);
+    if (!TestNotNull(TEXT("Single door widget"), Widget)) { return false; }
+    Widget->SetDoorVariants(One.Doors);
+    const TSharedRef<SWidget> Slate = Widget->TakeWidget();
+    UHorizontalBox* Row = CastChecked<UHorizontalBox>(Widget->GetRootWidget());
+    TestEqual(TEXT("Single door keeps navigation layout"), Row->GetChildrenCount(), 3);
+    CastChecked<UButton>(Row->GetChildAt(0))->OnClicked.Broadcast();
+    CastChecked<UButton>(Row->GetChildAt(2))->OnClicked.Broadcast();
+    TestEqual(TEXT("E13d: single door no change"), One.Doors->GetActiveVariant(), 0);
+    TestEqual(TEXT("E13d: single door no events"), OneEvents->Count, 0);
+    TestEqual(TEXT("Single door label"), CastChecked<UTextBlock>(Row->GetChildAt(1))->GetText().ToString(), FString(TEXT("Door A (1/1)")));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FReachDoorConcurrentTest, "ReachStudy.S4.E13b_ConcurrentInputs", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FReachDoorConcurrentTest::RunTest(const FString& Parameters)
+{
+    for (bool bKeyFirst : {true, false})
+    {
+        FDoorWorld F;
+        F.Doors->DispatchBeginPlay();
+        UReachDoorTestObserver* Events = NewObject<UReachDoorTestObserver>();
+        F.Doors->OnVariantChanged.AddDynamic(Events, &UReachDoorTestObserver::Record);
+        UReachDoorPanelWidget* Widget = CreateWidget<UReachDoorPanelWidget>(F.World);
+        if (!TestNotNull(TEXT("Concurrent input widget"), Widget)) { return false; }
+        Widget->SetDoorVariants(F.Doors);
+        const TSharedRef<SWidget> Slate = Widget->TakeWidget();
+        UHorizontalBox* Row = CastChecked<UHorizontalBox>(Widget->GetRootWidget());
+        UButton* Next = CastChecked<UButton>(Row->GetChildAt(2));
+        if (bKeyFirst) { F.Doors->HandleKey(EKeys::X); }
+        Next->OnClicked.Broadcast();
+        if (!bKeyFirst) { F.Doors->HandleKey(EKeys::X); }
+        TestEqual(TEXT("E13b: both orders end on B"), F.Doors->GetActiveVariant(), 1);
+        TestEqual(TEXT("E13b: both orders emit one event"), Events->Count, 1);
+        TestEqual(TEXT("E13b: event carries B index"), Events->LastIndex, 1);
+    }
     return true;
 }
 
@@ -330,8 +484,8 @@ bool FReachDoorEmptyWidgetTest::RunTest(const FString& Parameters)
     if (!TestNotNull(TEXT("Panel forwards manager to widget"), PanelWidget)) { return false; }
     const TSharedRef<SWidget> PanelSlate = PanelWidget->TakeWidget();
     UHorizontalBox* PanelRow = CastChecked<UHorizontalBox>(PanelWidget->GetRootWidget());
-    TestEqual(TEXT("Connected panel creates variant buttons"), PanelRow->GetChildrenCount(), 2);
-    TestTrue(TEXT("Initial color works before manager BeginPlay"), CastChecked<UButton>(PanelRow->GetChildAt(1))->GetBackgroundColor() == PanelWidget->ActiveColor);
+    TestEqual(TEXT("Connected panel creates navigation row"), PanelRow->GetChildrenCount(), 3);
+    TestEqual(TEXT("Initial label works before manager BeginPlay"), CastChecked<UTextBlock>(PanelRow->GetChildAt(1))->GetText().ToString(), FString(TEXT("Door B (2/2)")));
     F.Doors->DispatchBeginPlay();
     TestTrue(TEXT("Nonzero initial variant applied without switch"), F.A->IsHidden() && !F.B->IsHidden());
     CastChecked<UButton>(PanelRow->GetChildAt(0))->OnClicked.Broadcast();

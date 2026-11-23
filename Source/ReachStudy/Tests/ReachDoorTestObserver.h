@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "Door/ReachDoorVariants.h"
 #include "ReachDoorTestObserver.generated.h"
 
 UCLASS()
@@ -14,4 +15,15 @@ public:
 
     UFUNCTION()
     void Record(int32 Index) { ++Count; LastIndex = Index; }
+};
+
+UCLASS()
+class AReachDoorTestVariants : public AReachDoorVariants
+{
+    GENERATED_BODY()
+public:
+    double NowSeconds = 100.0;
+
+protected:
+    virtual double ReadSwitchTimeSeconds() const override { return NowSeconds; }
 };

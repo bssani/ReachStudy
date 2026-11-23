@@ -6,28 +6,26 @@
 #include "Components/TextBlock.h"
 #include "Door/ReachDoorVariants.h"
 
-void UReachDoorVariantButton::Configure(AReachDoorVariants* InDoorVariants, int32 InIndex)
+void UReachDoorPanelWidget::SelectPrevious()
 {
-    DoorVariants = InDoorVariants;
-    Index = InIndex;
-    OnClicked.AddUniqueDynamic(this, &UReachDoorVariantButton::SelectDoor);
+    if (IsValid(DoorVariants)) { DoorVariants->SelectPrevious(); }
 }
 
-void UReachDoorVariantButton::SelectDoor()
+void UReachDoorPanelWidget::SelectNext()
 {
-    if (IsValid(DoorVariants)) { DoorVariants->SelectVariant(Index); }
+    if (IsValid(DoorVariants)) { DoorVariants->SelectNext(); }
 }
 
 void UReachDoorPanelWidget::SetDoorVariants(AReachDoorVariants* InDoorVariants)
 {
     if (IsValid(DoorVariants))
     {
-        DoorVariants->OnVariantChanged.RemoveDynamic(this, &UReachDoorPanelWidget::RefreshColors);
+        DoorVariants->OnVariantChanged.RemoveDynamic(this, &UReachDoorPanelWidget::RefreshLabel);
     }
     DoorVariants = InDoorVariants;
     if (IsValid(DoorVariants))
     {
-        DoorVariants->OnVariantChanged.AddUniqueDynamic(this, &UReachDoorPanelWidget::RefreshColors);
+        DoorVariants->OnVariantChanged.AddUniqueDynamic(this, &UReachDoorPanelWidget::RefreshLabel);
     }
     if (Row) { BuildButtons(); }
 }
@@ -44,6 +42,7 @@ TSharedRef<SWidget> UReachDoorPanelWidget::RebuildWidget()
 void UReachDoorPanelWidget::BuildButtons()
 {
     Row->ClearChildren();
+    CurrentDoorLabel = nullptr;
     if (!IsValid(DoorVariants))
     {
         UTextBlock* Message = WidgetTree->ConstructWidget<UTextBlock>();
@@ -54,33 +53,44 @@ void UReachDoorPanelWidget::BuildButtons()
         Row->AddChildToHorizontalBox(Message);
         return;
     }
-    for (int32 Index = 0; Index < DoorVariants->Variants.Num(); ++Index)
+    const auto AddButton = [this](const FText& Text, bool bNext)
     {
-        UReachDoorVariantButton* Button = WidgetTree->ConstructWidget<UReachDoorVariantButton>();
-        Button->Configure(DoorVariants, Index);
+        UButton* Button = WidgetTree->ConstructWidget<UButton>();
+        Button->SetBackgroundColor(ButtonColor);
+        if (bNext) { Button->OnClicked.AddUniqueDynamic(this, &UReachDoorPanelWidget::SelectNext); }
+        else { Button->OnClicked.AddUniqueDynamic(this, &UReachDoorPanelWidget::SelectPrevious); }
         UTextBlock* Label = WidgetTree->ConstructWidget<UTextBlock>();
-        Label->SetText(DoorVariants->Variants[Index].Name);
+        Label->SetText(Text);
+        Label->SetColorAndOpacity(TextColor);
         FSlateFontInfo Font = Label->GetFont();
         Font.Size = FontSize;
         Label->SetFont(Font);
         Button->AddChild(Label);
         UHorizontalBoxSlot* ButtonSlot = Row->AddChildToHorizontalBox(Button);
-        ButtonSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
         ButtonSlot->SetPadding(FMargin(4.0f));
-    }
-    RefreshColors(DoorVariants->GetActiveVariant());
+        ButtonSlot->SetVerticalAlignment(VAlign_Center);
+    };
+    AddButton(PreviousButtonText, false);
+    CurrentDoorLabel = WidgetTree->ConstructWidget<UTextBlock>();
+    FSlateFontInfo Font = CurrentDoorLabel->GetFont();
+    Font.Size = FontSize;
+    CurrentDoorLabel->SetFont(Font);
+    CurrentDoorLabel->SetColorAndOpacity(TextColor);
+    UHorizontalBoxSlot* LabelSlot = Row->AddChildToHorizontalBox(CurrentDoorLabel);
+    LabelSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    LabelSlot->SetHorizontalAlignment(HAlign_Center);
+    LabelSlot->SetVerticalAlignment(VAlign_Center);
+    AddButton(NextButtonText, true);
+    RefreshLabel(DoorVariants->GetActiveVariant());
 }
 
-void UReachDoorPanelWidget::RefreshColors(int32 Index)
+void UReachDoorPanelWidget::RefreshLabel(int32 Index)
 {
-    if (!Row) { return; }
-    for (int32 Child = 0; Child < Row->GetChildrenCount(); ++Child)
-    {
-        if (UButton* Button = Cast<UButton>(Row->GetChildAt(Child)))
-        {
-            Button->SetBackgroundColor(Child == Index ? ActiveColor : IdleColor);
-        }
-    }
+    if (!CurrentDoorLabel || !IsValid(DoorVariants)) { return; }
+    CurrentDoorLabel->SetText(DoorVariants->Variants.IsValidIndex(Index)
+        ? FText::Format(NSLOCTEXT("ReachDoorPanel", "CurrentDoor", "{0} ({1}/{2})"),
+            DoorVariants->Variants[Index].Name, FText::AsNumber(Index + 1), FText::AsNumber(DoorVariants->Variants.Num()))
+        : FText::GetEmpty());
 }
 
 void UReachDoorPanelWidget::NativeConstruct()
@@ -88,8 +98,8 @@ void UReachDoorPanelWidget::NativeConstruct()
     Super::NativeConstruct();
     if (IsValid(DoorVariants))
     {
-        DoorVariants->OnVariantChanged.AddUniqueDynamic(this, &UReachDoorPanelWidget::RefreshColors);
-        RefreshColors(DoorVariants->GetActiveVariant());
+        DoorVariants->OnVariantChanged.AddUniqueDynamic(this, &UReachDoorPanelWidget::RefreshLabel);
+        RefreshLabel(DoorVariants->GetActiveVariant());
     }
 }
 
@@ -97,7 +107,7 @@ void UReachDoorPanelWidget::NativeDestruct()
 {
     if (IsValid(DoorVariants))
     {
-        DoorVariants->OnVariantChanged.RemoveDynamic(this, &UReachDoorPanelWidget::RefreshColors);
+        DoorVariants->OnVariantChanged.RemoveDynamic(this, &UReachDoorPanelWidget::RefreshLabel);
     }
     Super::NativeDestruct();
 }

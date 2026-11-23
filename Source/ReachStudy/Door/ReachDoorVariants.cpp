@@ -3,6 +3,7 @@
 #include "Components/InputComponent.h"
 #include "Components/SceneComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "HAL/PlatformTime.h"
 #include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogReachDoorVariants, Log, All);
@@ -37,20 +38,25 @@ void AReachDoorVariants::BeginPlay()
             }
         }
     }
-    if (Variants.IsValidIndex(InitialVariant))
+    for (const auto& Entry : OriginalStates)
     {
-        ActiveVariant = InitialVariant;
-        ApplySelection();
+        if (Entry.Value.VariantIndices.Num() > 1)
+        {
+            UE_LOG(LogReachDoorVariants, Warning, TEXT("Actor belongs to multiple door variants: %s"), *GetNameSafe(Entry.Key.Get()));
+        }
     }
-    else
+    if (!Variants.IsValidIndex(InitialVariant))
     {
         UE_LOG(LogReachDoorVariants, Warning, TEXT("Invalid door variant index: %d"), InitialVariant);
     }
+    ActiveVariant = GetActiveVariant();
+    ApplySelection();
+    LastSwitchTimeSeconds = -TNumericLimits<double>::Max();
     bInitialized = true;
     if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
     {
         EnableInput(PC);
-        for (const FKey& Key : {EKeys::Z, EKeys::X, EKeys::C, EKeys::V})
+        for (const FKey& Key : {EKeys::Z, EKeys::X, EKeys::C, EKeys::V, EKeys::N, EKeys::B})
         {
             InputComponent->BindKey(Key, IE_Pressed, this, &AReachDoorVariants::HandleKey);
         }
@@ -67,14 +73,37 @@ void AReachDoorVariants::SelectVariant(int32 Index)
     if (!bInitialized || ActiveVariant == Index) { return; }
     ActiveVariant = Index;
     ApplySelection();
+    LastSwitchTimeSeconds = ReadSwitchTimeSeconds();
     OnVariantChanged.Broadcast(Index);
+}
+
+double AReachDoorVariants::ReadSwitchTimeSeconds() const
+{
+    // Independent of pause and time dilation (S4 D2).
+    return FPlatformTime::Seconds();
+}
+
+void AReachDoorVariants::SelectNext()
+{
+    SelectRelative(1);
+}
+
+void AReachDoorVariants::SelectPrevious()
+{
+    SelectRelative(-1);
+}
+
+void AReachDoorVariants::SelectRelative(int32 Direction)
+{
+    if (!bInitialized || Variants.Num() <= 1) { return; }
+    if (ReadSwitchTimeSeconds() - LastSwitchTimeSeconds < SwitchCooldownSeconds) { return; }
+    SelectVariant((ActiveVariant + Direction + Variants.Num()) % Variants.Num());
 }
 
 bool AReachDoorVariants::IsActorActive(AActor* Actor) const
 {
     const FActorState* State = OriginalStates.Find(Actor);
-    // Shared actors keep their original state in every variant (S4 D3).
-    return !State || State->VariantIndices.Num() > 1 || State->VariantIndices.Contains(ActiveVariant);
+    return !State || State->VariantIndices.Contains(ActiveVariant);
 }
 
 void AReachDoorVariants::ApplySelection()
@@ -91,6 +120,8 @@ void AReachDoorVariants::ApplySelection()
 
 void AReachDoorVariants::HandleKey(FKey Key)
 {
+    if (Key == EKeys::N) { SelectNext(); return; }
+    if (Key == EKeys::B) { SelectPrevious(); return; }
     const int32 Index = Key == EKeys::Z ? 0 : Key == EKeys::X ? 1
         : Key == EKeys::C ? 2 : Key == EKeys::V ? 3 : INDEX_NONE;
     if (Variants.IsValidIndex(Index)) { SelectVariant(Index); }

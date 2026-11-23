@@ -7,22 +7,7 @@
 
 class AReachDoorVariants;
 class UHorizontalBox;
-
-UCLASS()
-class UReachDoorVariantButton : public UButton
-{
-    GENERATED_BODY()
-public:
-    void Configure(AReachDoorVariants* InDoorVariants, int32 InIndex);
-
-private:
-    UFUNCTION()
-    void SelectDoor();
-
-    UPROPERTY(Transient)
-    TObjectPtr<AReachDoorVariants> DoorVariants;
-    int32 Index = INDEX_NONE;
-};
+class UTextBlock;
 
 UCLASS()
 class REACHSTUDY_API UReachDoorPanelWidget : public UUserWidget
@@ -30,10 +15,16 @@ class REACHSTUDY_API UReachDoorPanelWidget : public UUserWidget
     GENERATED_BODY()
 public:
     UPROPERTY(EditAnywhere, Category = "Reach")
-    FLinearColor ActiveColor = FLinearColor(0.1f, 0.6f, 0.25f, 1.0f);
+    FText PreviousButtonText = NSLOCTEXT("ReachDoorPanel", "Previous", "<");
 
     UPROPERTY(EditAnywhere, Category = "Reach")
-    FLinearColor IdleColor = FLinearColor(0.2f, 0.2f, 0.2f, 1.0f);
+    FText NextButtonText = NSLOCTEXT("ReachDoorPanel", "Next", ">");
+
+    UPROPERTY(EditAnywhere, Category = "Reach")
+    FLinearColor ButtonColor = FLinearColor(0.2f, 0.2f, 0.2f, 1.0f);
+
+    UPROPERTY(EditAnywhere, Category = "Reach")
+    FLinearColor TextColor = FLinearColor::White;
 
     UPROPERTY(EditAnywhere, Category = "Reach", meta = (ClampMin = "1"))
     int32 FontSize = 24;
@@ -52,10 +43,18 @@ private:
     void BuildButtons();
 
     UFUNCTION()
-    void RefreshColors(int32 Index);
+    void RefreshLabel(int32 Index);
+
+    UFUNCTION()
+    void SelectPrevious();
+
+    UFUNCTION()
+    void SelectNext();
 
     UPROPERTY(Transient)
     TObjectPtr<AReachDoorVariants> DoorVariants;
     UPROPERTY(Transient)
     TObjectPtr<UHorizontalBox> Row;
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> CurrentDoorLabel;
 };

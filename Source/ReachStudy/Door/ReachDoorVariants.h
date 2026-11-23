@@ -36,17 +36,26 @@ public:
     UPROPERTY(EditAnywhere, Category = "Reach")
     int32 InitialVariant = 0;
 
+    UPROPERTY(EditAnywhere, Category = "Reach", meta = (ClampMin = "0", Units = "s"))
+    double SwitchCooldownSeconds = 0.5;
+
     UPROPERTY(BlueprintAssignable, Category = "Reach")
     FReachVariantChanged OnVariantChanged;
 
     UFUNCTION(BlueprintCallable, Category = "Reach")
     void SelectVariant(int32 Index);
 
+    UFUNCTION(BlueprintCallable, Category = "Reach")
+    void SelectNext();
+
+    UFUNCTION(BlueprintCallable, Category = "Reach")
+    void SelectPrevious();
+
     UFUNCTION(BlueprintPure, Category = "Reach")
     int32 GetActiveVariant() const
     {
         // Panels may construct before this actor begins play (S4 D3/D6).
-        return bInitialized ? ActiveVariant : (Variants.IsValidIndex(InitialVariant) ? InitialVariant : INDEX_NONE);
+        return bInitialized ? ActiveVariant : (Variants.IsEmpty() ? INDEX_NONE : (Variants.IsValidIndex(InitialVariant) ? InitialVariant : 0));
     }
 
     UFUNCTION(BlueprintPure, Category = "Reach")
@@ -56,6 +65,7 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+    virtual double ReadSwitchTimeSeconds() const;
 
 private:
     struct FActorState
@@ -66,7 +76,9 @@ private:
     };
 
     void ApplySelection();
+    void SelectRelative(int32 Direction);
     TMap<TWeakObjectPtr<AActor>, FActorState> OriginalStates;
     int32 ActiveVariant = INDEX_NONE;
     bool bInitialized = false;
+    double LastSwitchTimeSeconds = -TNumericLimits<double>::Max();
 };
