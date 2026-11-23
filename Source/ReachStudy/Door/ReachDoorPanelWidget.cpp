@@ -43,14 +43,8 @@ void UReachDoorPanelWidget::BuildButtons()
 {
     Row->ClearChildren();
     CurrentDoorLabel = nullptr;
-    if (!IsValid(DoorVariants))
+    if (!IsValid(DoorVariants) || DoorVariants->Variants.IsEmpty())
     {
-        UTextBlock* Message = WidgetTree->ConstructWidget<UTextBlock>();
-        Message->SetText(NoDoorVariantsText);
-        FSlateFontInfo Font = Message->GetFont();
-        Font.Size = FontSize;
-        Message->SetFont(Font);
-        Row->AddChildToHorizontalBox(Message);
         return;
     }
     const auto AddButton = [this](const FText& Text, bool bNext)

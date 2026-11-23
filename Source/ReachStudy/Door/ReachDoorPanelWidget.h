@@ -29,9 +29,6 @@ public:
     UPROPERTY(EditAnywhere, Category = "Reach", meta = (ClampMin = "1"))
     int32 FontSize = 24;
 
-    UPROPERTY(EditAnywhere, Category = "Reach")
-    FText NoDoorVariantsText = NSLOCTEXT("ReachDoorPanel", "NoDoorVariants", "No door variants");
-
     void SetDoorVariants(AReachDoorVariants* InDoorVariants);
 
 protected:

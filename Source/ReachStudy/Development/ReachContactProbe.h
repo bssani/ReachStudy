@@ -54,13 +54,11 @@ public:
     void HandleKey(FKey Key);
     void ProcessFrame(const FReachHandSample& Left, const FReachHandSample& Right, float DeltaSeconds);
     const TArray<FReachProbeResult>& GetResults() const { return Results; }
-    FString BuildReadout(const FReachHandSample& Left, const FReachHandSample& Right) const;
 
 protected:
     virtual void BeginPlay() override;
 
 private:
-    void DrawReadout(const FReachHandSample& Left, const FReachHandSample& Right);
     void ResetContacts();
     void EnsureTouchMaterial();
     UFUNCTION()

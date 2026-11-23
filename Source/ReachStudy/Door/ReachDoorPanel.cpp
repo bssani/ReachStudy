@@ -23,7 +23,7 @@ AReachDoorPanel::AReachDoorPanel()
 void AReachDoorPanel::BeginPlay()
 {
     Super::BeginPlay();
-    if (!IsValid(DoorVariants))
+    if (!IsValid(DoorVariants) || DoorVariants->Variants.IsEmpty())
     {
         UE_LOG(LogReachDoorPanel, Warning, TEXT("No door variants"));
     }
