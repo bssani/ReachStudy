@@ -2,11 +2,14 @@
 
 #include "CoreMinimal.h"
 #include "HeadMountedDisplayTypes.h"
+#include "InputCoreTypes.h"
 #include "Contact/ReachContact.h"
 #include "ReachContactQuery.generated.h"
 
 class AActor;
 class UMaterialInterface;
+class UMeshComponent;
+class UPrimitiveComponent;
 
 UENUM(BlueprintType)
 enum class EReachContactPart : uint8
@@ -50,7 +53,13 @@ namespace ReachContact
 {
     TArray<EHandKeypoint> Keypoints(EReachContactPart Part);
     FReachHandSample ReadSample(const FXRHandTrackingState& Tracking, EReachContactPart Part);
+    FReachHandSample ReadHand(const UObject* WorldContext, EControllerHand Hand, EReachContactPart Part);
+    FReachContactQueryResult QueryComponent(UPrimitiveComponent* Target, const FReachHandSample& Hand,
+        float ContactDistanceMm, float ReleaseMarginMm, bool bUseJointRadius);
+    bool IsWithinContactBounds(UPrimitiveComponent* Target, const FReachHandSample& Hand,
+        float ContactDistanceMm, float ReleaseMarginMm);
     FReachContactQueryResult Query(AActor* Target, const FReachHandSample& Hand,
         float ContactDistanceMm, float ReleaseMarginMm, bool bUseJointRadius);
     void ApplyOverlay(AActor* Target, UMaterialInterface* Material);
+    void ApplyOverlay(UMeshComponent* Target, UMaterialInterface* Material);
 }
