@@ -8,7 +8,7 @@
 | 작업 브랜치 | `codex/S4-door-switch` |
 | 리뷰 파일 | `Docs/Reviews/S4-door-switch.md` (리뷰 1회차 뒤 개정 1을 같은 브랜치에서 반영) |
 | 에디터 작업 | **Codex는 하지 않는다**(Codex의 에디터 MCP는 vBoR에 연결돼 있다). 구현·리뷰 뒤 Claude가 MCP로 한다(§6) |
-| 범위 밖으로 옮긴 것 | **진행자 PC 창(계획서 Q-06)은 S3로 옮긴다.** "지금 닿아 있는 target"은 S3의 `AReachTarget`이 생겨야 제품 코드에서 읽을 수 있다. 지금 만들면 제품 코드가 개발 시험대(`Development/`)를 읽게 된다(S2 §2) |
+| 범위 밖으로 옮긴 것 | **진행자 PC 창(계획서 Q-06)은 S3로 옮긴다.** "지금 닿아 있는 target"은 S3의 제품 target(`UReachTouchComponent`, 계획서 D-13)이 생겨야 제품 코드에서 읽을 수 있다. 지금 만들면 제품 코드가 개발 시험대(`Development/`)를 읽게 된다(S2 §2) |
 
 ## 0. 확인한 사실
 
@@ -44,7 +44,7 @@
 
 ## 3. 범위 밖
 
-- 진행자 PC 창(계획서 Q-06) → S3. `AReachTarget`(S3), 정렬(S1), CAD(S5).
+- 진행자 PC 창(계획서 Q-06) → S3. 제품 target `UReachTouchComponent`(S3), 정렬(S1), CAD(S5).
 - Door 전환 연출(암전·소리·애니메이션). 필요하면 BP에서 `OnVariantChanged`에 붙인다(AGENTS.md "BP에는 표현만").
 - 버튼 패널의 자리·크기 결정 — 레벨에서 Claude가 놓고(§6) Quest에서 사용자가 본다.
 
@@ -114,3 +114,4 @@ S2의 `ReachStudy.S2.*` 시험은 그대로 통과해야 한다.
 
 - 2026-11-23 개정 1 (사용자 결정, 리뷰 1회차 뒤): 패널을 이전·다음 버튼 + 지금 Door 글로(D6), 상대 명령 `SelectNext`·`SelectPrevious`와 끝에서 돌아가기·쿨다운 0.5 s(D2), 키 `N`·`B`(D4), 공유 actor는 활성 Door 소속으로 판단 + 경고(D3, 리뷰 S-1), 잘못된 `InitialVariant`는 경고 + 0번(D1, 리뷰 S-2), Door 하나 = 부모 actor 하나(D1). 시험 E4b·E6·E12–E14·E13b–d.
 - 2026-11-23 — 초안 (Claude). 계획서 §5·§6·Q-06, S2 명세 §2·D1과 같이 맞춤(진행자 창 S4 → S3, Pawn poke 켜기, Door 전환이 actor collision을 끄는 것).
+- 2026-11-23 — S4b가 바꿀 것(이 명세 구현에는 영향 없음): D8 ② 시험대 헤더 `door <Name>`·E10 `inactive` 줄 글은 시험대 화면 글과 함께 없어지고, D5·E15 패널 안내 글 `No door variants`는 빈 패널로 바뀐다([S4b](S4b-headset-clean.md) D2·D3). 진행자 PC 창은 만들지 않기로 했다(계획서 Q-06).

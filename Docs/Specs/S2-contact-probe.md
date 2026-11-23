@@ -41,7 +41,7 @@
 
 ## 3. 범위 밖
 
-- `AReachTarget` 부모 클래스·BP 자식·진행자 창(S3), Door 전환·poke 버튼(S4), 정렬(S1), CAD import(S5).
+- 제품 target(S3에서 `UReachTouchComponent`로 바뀜, 계획서 D-13)·진행자 창(S3), Door 전환·poke 버튼(S4), 정렬(S1), CAD import(S5).
 - 방식 C(mesh 삼각형으로 직접 거리 계산, CPU 접근 필요). A·B가 둘 다 실패하면 리뷰 파일 "질문"에 결과와 함께 적고 멈춘다.
 - target 표면 뒤로 깊이 들어간 손 처리(계획서 D-03). 이번에는 화면에 보이는 대로 둔다 — 사용자가 Quest에서 보고 정한다.
 
@@ -122,3 +122,4 @@
 - 2026-11-22 개정 1 (Claude 재검토, 구현 전): ① 방식 B를 sweep → complex 구 overlap(`FBodyInstance::OverlapTest` + `bTraceComplex`). sweep은 dwell 때문에 이득이 없고, 2 cm 튐 한계가 빠른 손 이동(90 Hz에서 2 m/s ≈ 2.2 cm/프레임)에서 깨짐. `OverlapComponent`는 complex를 보지 않아 제외. ② 추적 끊김을 즉시 `Idle` → `TrackingGraceSeconds` 보류(vBoR 원칙, 1프레임 끊김 깜빡임 방지). ③ `Build.cs` 모듈 의존 명시. ④ 관절 반지름 `HandKeyRadii` 켬/끔 비교. ⑤ overlay material을 vBoR 방식(ISDK GrabbableLit `ColorParam`)으로 확정. ⑥ CAD collision 꺼짐 처리, vBoR 경로를 로컬 절대경로로, Codex가 할 수 없는 레벨 확인을 완료 조건에서 분리.
 - 2026-11-22 개정 2 (Codex 질문 Q-02 + Claude 전체 대조): ① 계획서 §4·D-04·§5·§8·T-02, AGENTS.md를 이 명세와 맞춤. ② **D4 보류를 손별로** — 개정 1은 "판정할 손이 하나도 없을 때만" 보류라서, 닿은 손만 시야 밖으로 나가고 다른 손은 보이는 흔한 경우(무릎 옆 Door target)에 바로 `Idle`이 됐다. E7d 기대값 바뀜, E7e·E7f 추가. 복구 첫 프레임이 보류 시간에 들어감을 명시. ③ `TrackingGraceSeconds` 키 `0`/`9`, E16. ④ 관절 반지름은 여유가 아님(§2·AGENTS.md).
 - 2026-11-23 개정 3 (S4 명세와 맞춤, 동작 변경 없음): §2 collision·손 모델 문장에 S4의 Door 전환·poke를 괄호로 적음, §3 진행자 창 S4 → S3.
+- 2026-11-23 개정 4 (사용자 결정, S4b): **시험대 화면 글(D7 "화면")을 없앤다** — 헤드셋에 어떤 메시지도 없다. 판정·키·overlay는 그대로. T-02는 숫자 대신 색 변화와 키로 바꾼 값으로 본다. 구현은 S4b D2.
