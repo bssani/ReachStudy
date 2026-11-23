@@ -9,8 +9,8 @@ public class ReachStudy : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay", "XRBase",
-			"OculusInteraction", "OculusInteractionPrebuilts"
+			"OculusInteraction", "OculusInteractionPrebuilts", "UMG"
 		});
-		PrivateDependencyModuleNames.Add("PhysicsCore");
+		PrivateDependencyModuleNames.AddRange(new string[] { "PhysicsCore", "Slate", "SlateCore" });
 	}
 }
