@@ -104,12 +104,49 @@
 
 ### 다음 → 사용자 결정으로 바뀜 (아래)
 
-## 1회차 뒤 사용자 결정 — 2026-11-23 → 명세 개정 1, 같은 브랜치에서 반영 (열림)
+## 1회차 뒤 사용자 결정 — 2026-11-23 → 명세 개정 1, 같은 브랜치에서 반영 (반영함, 리뷰 2회차 대기)
 
 사용자가 S-1·S-2를 머지 전에 고치기로 했고, 패널 방식도 바꿨다. 명세 [S4 개정 1](../Specs/S4-door-switch.md)에 반영했다. 아래는 모두 **문제**(머지 전 반영)다.
 
-- **P-1 (S-1)** `IsActorActive` = 활성 Door 소속(`Contains(ActiveVariant)`), 여러 Door에 든 actor는 BeginPlay 경고(D3). 사용자: Door 하나 = 부모 actor 하나, Door끼리 actor를 나누지 않음(D1). — 열림
-- **P-2 (S-2)** 범위 밖 `InitialVariant` → 경고 + 0번(D1). — 열림
-- **P-3 패널 = `[<] Door A (1/2) [>]`** Door별 버튼·활성 색을 없애고 이전·다음 버튼 + 가운데 지금 Door 글(D6). — 열림
-- **P-4 상대 명령** `SelectNext`·`SelectPrevious`, 끝에서 돌아감, 쿨다운 `SwitchCooldownSeconds` 0.5 s(상대 명령만 막음, 절대 번호는 막지 않음), 키 `N`·`B`(D2·D4). — 열림
+- **P-1 (S-1)** `IsActorActive` = 활성 Door 소속(`Contains(ActiveVariant)`), 여러 Door에 든 actor는 BeginPlay 경고(D3). 사용자: Door 하나 = 부모 actor 하나, Door끼리 actor를 나누지 않음(D1). — 반영함 (8852a71)
+- **P-2 (S-2)** 범위 밖 `InitialVariant` → 경고 + 0번(D1). — 반영함 (8852a71)
+- **P-3 패널 = `[<] Door A (1/2) [>]`** Door별 버튼·활성 색을 없애고 이전·다음 버튼 + 가운데 지금 Door 글(D6). — 반영함 (8852a71)
+- **P-4 상대 명령** `SelectNext`·`SelectPrevious`, 끝에서 돌아감, 쿨다운 `SwitchCooldownSeconds` 0.5 s(상대 명령만 막음, 절대 번호는 막지 않음), 키 `N`·`B`(D2·D4). — 반영함 (8852a71)
 - 시험: E4b·E6(3 Door)·E12·E13·E13b–d·E14 바뀜/추가(§4).
+
+## Codex 개정 1 구현 보고 — 2026-11-23 (`8852a71`, Claude 리뷰 2회차 대기)
+
+① 바뀐 파일
+- Docs/Reviews/S4-door-switch.md: P-1~P-4 반영 커밋과 이 보고. HANDOFF.md(git 무시): Codex 결과·리뷰 대기 상태.
+- Source/ReachStudy/Door/ReachDoorVariants.h·cpp: 공유 actor 경고·활성 소속 검사, 잘못된 InitialVariant의 0번 복구, 이전·다음 명령·실시간 쿨다운·N/B 입력.
+- Source/ReachStudy/Door/ReachDoorPanelWidget.h·cpp: Door별 버튼을 이전·현재 이름(번호/개수)·다음으로 교체. ActiveColor/IdleColor와 번호 버튼 클래스 제거, 버튼 글·색·글 크기 프로퍼티.
+- Source/ReachStudy/Tests/ReachDoorTestObserver.h, ReachDoorTests.cpp: 합성 시각과 개정 1 시험.
+
+② 완료 조건별 충족 여부
+- §4 E1–E17 및 E4b·E13b–d: ReachStudy.S4.* 11개 성공. E6은 2/3 Door에서 공유 actor 활성 범위와 actor당 경고 한 번, E4b는 잘못된 시작 번호와 빈 목록, E12–E14는 N/B·순환·0.5 s 경계·0 s·절대 명령 우회·동일 순간 키/버튼 양쪽 순서·현재 이름 갱신·Door 하나의 패널을 확인.
+- ReachStudy.* 전체 한 번 실행: S2 9 + S4 11 = 20개 Success, 실패 0, TEST COMPLETE. EXIT CODE: 0, 프로세스 종료 0.
+- non-unity(-DisableUnity -Module=ReachStudy) 및 실제 unity(Module.ReachStudy.cpp) 각각 한 번, Result: Succeeded, 종료 0, 두 빌드 로그 경고·오류 0(UHT -WarningsAsErrors 인자 제외).
+- 보고 ①–⑤ 충족. §6 Claude 에디터 배치·PIE 경고 없음은 not-tested, Claude 2회차 리뷰 대기.
+
+③ 명세와 다르게 한 것과 이유
+- 동작·범위 차이 없음. S4b 화면 글·No door variants와 S3는 손대지 않음. 에디터·에셋 변경 없음.
+- §5 재량: FPlatformTime::Seconds(double)로 pause/time dilation과 독립인 시각 사용. protected 시각 함수 하나를 시험 actor에서 재정의하여 실제 기다림 없이 검사. 기본 글 크기 24, 회색 버튼·흰 글.
+- unity 증거 확보를 위해 Saved/UnrealBuildTool/BuildConfiguration.xml의 강제 unity·adaptive 끔을 잠시 적용, finally에서 원래 바이트 복원.
+- -log=S4-Rev1-Automation.log를 주었으나 실제 출력은 Saved/Logs/ReachStudy.log에 생김. 재실행하지 않고 완료 로그를 S4-Rev1-Automation.log로 복사 보존.
+- 자동화 시작 시 기존 ISDK 샘플 InfoCardWidget CDO 오류 2건과 헤드셋 미연결/OpenXR/Meta 에셋·에디터 환경 경고 존재. 시험 실행 구간 경고·오류 0. 평가 결과 기록 기능은 추가하지 않음.
+- 로그(git 밖): Saved/Logs/S4-Rev1-NonUnity.log, S4-Rev1-Unity.log, S4-Rev1-Automation.log, S4-Rev1-Automation-stdout.log.
+
+④ 사용 API — 로컬 헤더 직접 확인, 추정 아님
+엔진 기준 C:/Program Files/Epic Games/UE_5.7/Engine/Source/Runtime/.
+- Core/Public/Windows/WindowsPlatformTime.h:23: Seconds(), QueryPerformanceCounter 기반 double 시각.
+- Engine/Classes/GameFramework/Actor.h:1925,1929,1933,3558,4521: actor 숨김·collision·재귀 부착 actor·원래 숨김 값.
+- UMG/Public/Components/Button.h:129: SetBackgroundColor; TextBlock.h:114: SetColorAndOpacity; HorizontalBoxSlot.h:58,63: 가운데 정렬.
+- Core/Public/Internationalization/Text.h:411,674: AsNumber(int32), Format; SlateCore/Public/Styling/SlateColor.h:62: FLinearColor 변환.
+- Plugins/MetaXRInteraction/Source/OculusInteractionPrebuilts/Public/IsdkInteractableWidgetComponent.h:57,209,230,237,244,251: 기존 패널의 widget/poke/ray/DrawSize/WidgetScale/WidgetClass. 이번 변경은 새 플러그인 API를 더하지 않음.
+
+⑤ 로컬에서 확인할 것
+- 빌드 두 종류·전체 자동화는 위와 같이 로컬 확인 완료. Claude 리뷰 2회차와 재현 대기.
+- Claude: 명세 §6 MCP 에디터 작업과 PIE, 이전·다음 패널 배치·글·경고 확인 — not-tested.
+- 사용자 Quest 3 Link T-03: 이전·다음 실제 poke, 한 번에 한 칸, 0.5 s 쿨다운 체감, 가운데 글·패널 크기/위치, limiter와 원본 손 관절 독립, 키보드 전환·상태 초기화 — not-tested.
+- T-02 실제 손 닿음은 not-tested. 합성 시험·빌드는 기기 시험이 아님.
+- 같은 codex/S4-door-switch 브랜치에 새 커밋. push·PR·main 머지 없음.
