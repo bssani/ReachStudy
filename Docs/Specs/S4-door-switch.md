@@ -8,7 +8,7 @@
 | 작업 브랜치 | `codex/S4-door-switch` |
 | 리뷰 파일 | `Docs/Reviews/S4-door-switch.md` (리뷰 1회차 뒤 개정 1을 같은 브랜치에서 반영) |
 | 에디터 작업 | **Codex는 하지 않는다**(Codex의 에디터 MCP는 vBoR에 연결돼 있다). 구현·리뷰 뒤 Claude가 MCP로 한다(§6) |
-| 범위 밖으로 옮긴 것 | **진행자 PC 창(계획서 Q-06)은 S3로 옮긴다.** "지금 닿아 있는 target"은 S3의 `AReachTarget`이 생겨야 제품 코드에서 읽을 수 있다. 지금 만들면 제품 코드가 개발 시험대(`Development/`)를 읽게 된다(S2 §2) |
+| 범위 밖으로 옮긴 것 | **진행자 PC 창(계획서 Q-06)은 S3로 옮긴다.** "지금 닿아 있는 target"은 S3의 제품 target(`UReachTouchComponent`, 계획서 D-13)이 생겨야 제품 코드에서 읽을 수 있다. 지금 만들면 제품 코드가 개발 시험대(`Development/`)를 읽게 된다(S2 §2) |
 
 ## 0. 확인한 사실
 
@@ -44,7 +44,7 @@
 
 ## 3. 범위 밖
 
-- 진행자 PC 창(계획서 Q-06) → S3. `AReachTarget`(S3), 정렬(S1), CAD(S5).
+- 진행자 PC 창(계획서 Q-06) → S3. 제품 target `UReachTouchComponent`(S3), 정렬(S1), CAD(S5).
 - Door 전환 연출(암전·소리·애니메이션). 필요하면 BP에서 `OnVariantChanged`에 붙인다(AGENTS.md "BP에는 표현만").
 - 버튼 패널의 자리·크기 결정 — 레벨에서 Claude가 놓고(§6) Quest에서 사용자가 본다.
 

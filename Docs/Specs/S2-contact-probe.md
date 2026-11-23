@@ -41,7 +41,7 @@
 
 ## 3. 범위 밖
 
-- `AReachTarget` 부모 클래스·BP 자식·진행자 창(S3), Door 전환·poke 버튼(S4), 정렬(S1), CAD import(S5).
+- 제품 target(S3에서 `UReachTouchComponent`로 바뀜, 계획서 D-13)·진행자 창(S3), Door 전환·poke 버튼(S4), 정렬(S1), CAD import(S5).
 - 방식 C(mesh 삼각형으로 직접 거리 계산, CPU 접근 필요). A·B가 둘 다 실패하면 리뷰 파일 "질문"에 결과와 함께 적고 멈춘다.
 - target 표면 뒤로 깊이 들어간 손 처리(계획서 D-03). 이번에는 화면에 보이는 대로 둔다 — 사용자가 Quest에서 보고 정한다.
 
