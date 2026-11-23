@@ -150,3 +150,34 @@
 - 사용자 Quest 3 Link T-03: 이전·다음 실제 poke, 한 번에 한 칸, 0.5 s 쿨다운 체감, 가운데 글·패널 크기/위치, limiter와 원본 손 관절 독립, 키보드 전환·상태 초기화 — not-tested.
 - T-02 실제 손 닿음은 not-tested. 합성 시험·빌드는 기기 시험이 아님.
 - 같은 codex/S4-door-switch 브랜치에 새 커밋. push·PR·main 머지 없음.
+
+## 코드 리뷰 2회차 — Claude 2026-11-23 (`8852a71`) — 통과, 머지 가능
+
+### 재현
+
+- non-unity(`-DisableUnity -Module=ReachStudy`, Door·Tests cpp를 건드려 다시 컴파일): Succeeded, 경고·오류 0.
+- 실제 unity(`Module.ReachStudy.cpp`, git 무시 빌드 XML 잠시 적용 → 원래 바이트로 되돌림, `cmp` 같음): Succeeded, 경고·오류 0.
+- `ReachStudy.*` 20개(S2 9 + S4 11) Success, `TEST COMPLETE. EXIT CODE: 0`, 프로세스 종료 0.
+
+### 확인한 것
+
+- P-1 `IsActorActive` = `Contains(ActiveVariant)`, 여러 Door에 든 actor는 BeginPlay에서 actor당 경고 한 번. 같은 Door에 두 번 넣은 것은 경고 없음(E6 시험이 확인).
+- P-2 범위 밖 `InitialVariant` → 경고 + 0번, BeginPlay 전 패널도 `GetActiveVariant()` 0을 본다. 빈 목록은 경고만, actor 그대로.
+- P-3 패널 `[<] Door A (1/2) [>]`, `OnVariantChanged`로 가운데 글 갱신, Door 하나도 같은 모양.
+- P-4 쿨다운은 실제 변경 때만 시작(같은 번호 `SelectVariant`는 시작하지 않음), BeginPlay 적용은 시작하지 않음, 경계 0.5 s는 받음, 0이면 끔, 절대 명령은 막지 않음. 시각은 `FPlatformTime::Seconds`(§5 실시간), 시험은 가상 함수로 시각을 넣어 기다리지 않음.
+- E13b 키·버튼 같은 순간 두 순서 모두 B·이벤트 1.
+- 범위 밖(S4b 화면 글, S3)은 손대지 않음.
+
+### 문제
+
+- 없음.
+
+### 메모 (머지를 막지 않음, 고치지 않음)
+
+- N-1 빈 목록 경고가 `Invalid door variant index: 0`으로 나온다(명세 "경고만"과 맞음, 글이 조금 어색할 뿐).
+- N-2 시험용 `AReachDoorTestVariants`가 제품 모듈에 UCLASS로 들어간다(1회차 `UReachDoorTestObserver`와 같은 방식, 지금은 그대로).
+- N-3 `-log=<이름>`이 적용되지 않은 것은 `-abslog=<전체 경로>`를 쓰면 된다.
+
+### 다음
+
+- 사용자 승인 뒤 `main` 머지·push → Claude MCP §6 에디터 작업 → S4b·S3 명세를 `main`에 넣고 HANDOFF를 S4b로.
