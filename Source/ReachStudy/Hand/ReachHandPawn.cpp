@@ -3,7 +3,6 @@
 #include "Camera/CameraComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
-#include "HeadMountedDisplayFunctionLibrary.h"
 #include "Interaction/IsdkGrabberComponent.h"
 #include "MotionControllerComponent.h"
 #include "Rig/IsdkGrabInteractionRigComponent.h"
@@ -65,7 +64,5 @@ AReachHandPawn::AReachHandPawn()
 
 FReachHandSample AReachHandPawn::ReadHand(EControllerHand Hand, EReachContactPart Part) const
 {
-    FXRHandTrackingState Tracking;
-    UHeadMountedDisplayFunctionLibrary::GetHandTrackingState(GetWorld(), EXRSpaceType::UnrealWorldSpace, Hand, Tracking);
-    return ReachContact::ReadSample(Tracking, Part);
+    return ReachContact::ReadHand(GetWorld(), Hand, Part);
 }

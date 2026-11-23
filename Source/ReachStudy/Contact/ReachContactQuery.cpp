@@ -3,6 +3,7 @@
 #include "CollisionShape.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/Actor.h"
+#include "HeadMountedDisplayFunctionLibrary.h"
 #include "PhysicsEngine/BodyInstance.h"
 
 TArray<EHandKeypoint> ReachContact::Keypoints(EReachContactPart Part)
@@ -46,24 +47,30 @@ FReachHandSample ReachContact::ReadSample(const FXRHandTrackingState& Tracking, 
     return Result;
 }
 
-FReachContactQueryResult ReachContact::Query(AActor* Target, const FReachHandSample& Hand,
+FReachHandSample ReachContact::ReadHand(const UObject* WorldContext, EControllerHand Hand, EReachContactPart Part)
+{
+    FXRHandTrackingState Tracking;
+    UHeadMountedDisplayFunctionLibrary::GetHandTrackingState(WorldContext ? WorldContext->GetWorld() : nullptr,
+        EXRSpaceType::UnrealWorldSpace, Hand, Tracking);
+    return ReadSample(Tracking, Part);
+}
+
+FReachContactQueryResult ReachContact::QueryComponent(UPrimitiveComponent* Target, const FReachHandSample& Hand,
     float ContactDistanceMm, float ReleaseMarginMm, bool bUseJointRadius)
 {
     FReachContactQueryResult Result;
     if (!IsValid(Target)) { return Result; }
-    TInlineComponentArray<UStaticMeshComponent*> Meshes(Target);
-    for (UStaticMeshComponent* Mesh : Meshes)
+    FBodyInstance* Body = Target->GetBodyInstance();
+    if (!Target->IsQueryCollisionEnabled() || !Body || !Body->IsValidBodyInstance()) { return Result; }
+    Result.bHasCollision = true;
+    if (Hand.bTracked)
     {
-        FBodyInstance* Body = Mesh->GetBodyInstance();
-        if (!Mesh->IsQueryCollisionEnabled() || !Body || !Body->IsValidBodyInstance()) { continue; }
-        Result.bHasCollision = true;
-        if (!Hand.bTracked) { continue; }
         for (const FReachJointSample& Joint : Hand.Joints)
         {
             const float RadiusMm = bUseJointRadius ? Joint.RadiusMm : 0.0f;
             float SquaredDistanceCm = 0.0f;
             FVector ClosestPoint;
-            if (Mesh->GetSquaredDistanceToCollision(Joint.WorldPosition, SquaredDistanceCm, ClosestPoint))
+            if (Target->GetSquaredDistanceToCollision(Joint.WorldPosition, SquaredDistanceCm, ClosestPoint))
             {
                 // UE is cm, settings and readout are mm (S2 D5).
                 const float DistanceMm = FMath::Max(0.0f, FMath::Sqrt(SquaredDistanceCm) * 10.0f - RadiusMm);
@@ -95,6 +102,60 @@ FReachContactQueryResult ReachContact::Query(AActor* Target, const FReachHandSam
             : EReachContactCondition::None;
     }
     return Result;
+}
+
+FReachContactQueryResult ReachContact::Query(AActor* Target, const FReachHandSample& Hand,
+    float ContactDistanceMm, float ReleaseMarginMm, bool bUseJointRadius)
+{
+    FReachContactQueryResult Result;
+    if (!IsValid(Target)) { return Result; }
+    TInlineComponentArray<UStaticMeshComponent*> Meshes(Target);
+    for (UStaticMeshComponent* Mesh : Meshes)
+    {
+        const FReachContactQueryResult One = QueryComponent(Mesh, Hand, ContactDistanceMm, ReleaseMarginMm, bUseJointRadius);
+        Result.bHasCollision |= One.bHasCollision;
+        if (One.DistanceMm >= 0.0f && (Result.DistanceMm < 0.0f || One.DistanceMm < Result.DistanceMm))
+        {
+            Result.DistanceMm = One.DistanceMm;
+            Result.JointRadiusMm = One.JointRadiusMm;
+            Result.NearestJoint = One.NearestJoint;
+        }
+        if (One.Simple > Result.Simple) { Result.Simple = One.Simple; }
+        if (One.Complex > Result.Complex) { Result.Complex = One.Complex; }
+    }
+    return Result;
+}
+
+bool ReachContact::IsWithinContactBounds(UPrimitiveComponent* Target, const FReachHandSample& Hand,
+    float ContactDistanceMm, float ReleaseMarginMm)
+{
+    if (!IsValid(Target) || !Hand.bTracked) { return false; }
+    FBox Bounds = Target->Bounds.GetBox();
+    if (FBodyInstance* Body = Target->GetBodyInstance(); Body && Body->IsValidBodyInstance())
+    {
+        const FBox BodyBounds = Body->GetBodyBounds();
+        if (BodyBounds.IsValid) { Bounds += BodyBounds; }
+    }
+    if (!Bounds.IsValid) { return true; }
+    float MaxRadiusMm = 0.0f;
+    for (const FReachJointSample& Joint : Hand.Joints)
+    {
+        MaxRadiusMm = FMath::Max(MaxRadiusMm, Joint.RadiusMm);
+    }
+    // UE is cm; include simple bodies outside rendering bounds (S3 D7).
+    // Keep inclusive boundaries in FVector's double precision (S3 E12).
+    const double PaddingCm = (static_cast<double>(ContactDistanceMm) + ReleaseMarginMm + MaxRadiusMm) * 0.1;
+    Bounds = Bounds.ExpandBy(PaddingCm);
+    for (const FReachJointSample& Joint : Hand.Joints)
+    {
+        if (Bounds.IsInsideOrOn(Joint.WorldPosition)) { return true; }
+    }
+    return false;
+}
+
+void ReachContact::ApplyOverlay(UMeshComponent* Target, UMaterialInterface* Material)
+{
+    if (IsValid(Target)) { Target->SetOverlayMaterial(Material); }
 }
 
 void ReachContact::ApplyOverlay(AActor* Target, UMaterialInterface* Material)
