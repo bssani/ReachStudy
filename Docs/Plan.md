@@ -17,7 +17,7 @@
 | D-05 | **닿는 동안만 material 변경** | 떨어지면 바로 원래 material로 돌아간다. 누적·완료 상태 없음 |
 | D-06 | **다른 면 통과는 따지지 않음** | Door trim·IP를 통과해 닿아도 닿음 |
 | D-07 | **기록 없음, 화면 확인만** | 평가 결과 파일·로그를 만들지 않는다 |
-| D-08 | **Door 전환 = 진행자 키보드 + 3D widget 버튼** | 같은 명령. 전환하면 target 상태를 초기화한다 |
+| D-08 | **Door 전환 = 진행자 키보드 + 3D widget 버튼** | 같은 명령. 전환하면 target 상태를 초기화한다. 패널은 이전·다음 버튼 + 지금 Door 이름, 끝에서 처음으로 돌아감, 전환 뒤 0.5 s 상대 입력 무시. Door는 늘어날 수 있다(사용자 2026-11-23, S4 개정 1) |
 | D-09 | **두 Door와 IP는 같은 차 원점** | CAD export 원점이 같다. 같은 레벨에 두고 켜고 끈다 |
 | D-10 | **관전(TV) 화면 없음** | |
 | D-11 | **프로젝트** | `C:\Git\ReachStudy`, GitHub `bssani/ReachStudy` **public**. UE 5.7.4, Meta XR·ISDK 1.205.0(vBoR과 같은 버전, git에는 넣지 않음) |
@@ -53,11 +53,11 @@
 
 | 요소 | 내용 |
 |---|---|
-| `AReachTarget` (C++) → `BP_ReachTarget_<Name>` | target mesh 하나. 상태 `Idle` / `Dwelling` / `Touching`. Touching이면 overlay material을 켜고(slot material은 건드리지 않음, S2 D6), Idle로 돌아가면 끈다. 이벤트 `OnTouchBegin` / `OnTouchEnd`. BP에서는 mesh와 닿음 material만 정한다 |
+| `AReachTarget` (C++) → `BP_ReachTarget_<Name>` | target mesh 하나. Door의 target은 그 Door 부모 actor 밑에 붙는다(Door와 같이 켜지고 꺼짐, 사용자 2026-11-23 — 붙이는 방식은 S3 명세). 상태 `Idle` / `Dwelling` / `Touching`. Touching이면 overlay material을 켜고(slot material은 건드리지 않음, S2 D6), Idle로 돌아가면 끈다. 이벤트 `OnTouchBegin` / `OnTouchEnd`. BP에서는 mesh와 닿음 material만 정한다 |
 | 손 관절 읽기 | XR 원본 관절 위치(`GetHandTrackingState`, vBoR `AVBoRHandRigPawn::ReadRawIndexTip`과 같은 경로, S2 D2). 추적 끊김 = 그 프레임 판정 안 함, 결과는 보류(§4) |
 | 닿음 판정 | 관절점마다 target 형상과의 닿음. 방식 A(simple collision까지 거리) / B(complex collision 구 overlap, 거리 값 없음) 중 하나를 **S2 결과로 정한다** |
-| `AReachDoorVariants` (C++) | Door A·Door B 각각의 Actor 목록(붙은 자식 actor 포함). 활성 Door만 보이고 collision이 켜진다 — actor 단위 숨김·collision만 바꾸고 원래 값으로 되돌린다. 전환하면 모든 target 초기화(D-08). IP는 이 목록에 없다. [S4 명세](Specs/S4-door-switch.md) |
-| Door 전환 입력 | 진행자 키보드(`Z`·`X`) + **참가자가 누르는** 3D widget poke 버튼(Q-05, vBoR `BP_LightPanel` 방식). 둘 다 같은 명령 `SelectVariant(번호)` (S4) |
+| `AReachDoorVariants` (C++) | Door마다 Actor 목록 — **Door 하나 = 부모 actor 하나**, 붙은 자식 actor(target mesh 포함)가 같이 켜지고 꺼진다(사용자 2026-11-23). 활성 Door만 보이고 collision이 켜진다 — actor 단위 숨김·collision만 바꾸고 원래 값으로 되돌린다. 전환하면 모든 target 초기화(D-08). IP는 이 목록에 없다. [S4 명세](Specs/S4-door-switch.md) |
+| Door 전환 입력 | 진행자 키보드(번호 `Z`·`X`·`C`·`V`, 이전·다음 `B`·`N`) + **참가자가 누르는** 3D widget poke 패널 `[<] Door A (1/2) [>]`(Q-05, vBoR `BP_LightPanel` 방식). 명령은 `SelectVariant(번호)`·`SelectNext`·`SelectPrevious` (S4) |
 | 정렬 | vBoR Calibration 플러그인(Q-01). 운전석 하나, 시나리오·좌석 전환 없음 |
 
 ## 6. 단계
@@ -92,3 +92,4 @@
 - 2026-11-22 — Q-01·Q-03·Q-05·Q-06 사용자 답 반영. D-02 `Fingers` → `Fingertips`(다섯 손가락 끝). D-03 "표면 안쪽 언제나 닿음"은 Claude가 근거 없이 넣은 것이라 빼고 S2에서 정함(엔진 거리 함수가 오목 형상을 지원하지 않음, S2 §0). S2 명세 작성.
 - 2026-11-22 — S2 명세 개정 1·2와 맞춤(Codex 질문 S2 Q-02): §4 추적 끊김 = 손별 보류(`TrackingGraceSeconds`), D-04 dwell 멈춤, D-03 관절 중심/겉면은 S2, §5 overlay·방식 A/B 표기, T-02·§8 문구.
 - 2026-11-23 — S4 명세 작성. `AReachVariantSet` → `AReachDoorVariants`, Door 전환 키 `Z`·`X`, 명령 `SelectVariant`. 진행자 PC 창(Q-06)을 S4 → S3로 옮김.
+- 2026-11-23 — S4 개정 1(사용자): D-08에 이전·다음 패널·돌아가기·쿨다운, Door 수 늘어날 수 있음. §5 Door = 부모 actor 하나, Door target은 Door 밑에.

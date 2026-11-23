@@ -102,6 +102,14 @@
 - §6 레벨 작업 뒤 PIE: `Z`/`X`로 `T_KneeSide`/`T_KneeSideB` 전환, 시험대 `inactive` 줄, 패널 버튼 색, 경고 없음 (Claude, MCP).
 - Quest 3 T-03 일부(명세 §8) — `not-tested`.
 
-### 다음
+### 다음 → 사용자 결정으로 바뀜 (아래)
 
-사용자 승인 후 `main` 머지 → Claude가 명세 §6 레벨 작업(MCP).
+## 1회차 뒤 사용자 결정 — 2026-11-23 → 명세 개정 1, 같은 브랜치에서 반영 (열림)
+
+사용자가 S-1·S-2를 머지 전에 고치기로 했고, 패널 방식도 바꿨다. 명세 [S4 개정 1](../Specs/S4-door-switch.md)에 반영했다. 아래는 모두 **문제**(머지 전 반영)다.
+
+- **P-1 (S-1)** `IsActorActive` = 활성 Door 소속(`Contains(ActiveVariant)`), 여러 Door에 든 actor는 BeginPlay 경고(D3). 사용자: Door 하나 = 부모 actor 하나, Door끼리 actor를 나누지 않음(D1). — 열림
+- **P-2 (S-2)** 범위 밖 `InitialVariant` → 경고 + 0번(D1). — 열림
+- **P-3 패널 = `[<] Door A (1/2) [>]`** Door별 버튼·활성 색을 없애고 이전·다음 버튼 + 가운데 지금 Door 글(D6). — 열림
+- **P-4 상대 명령** `SelectNext`·`SelectPrevious`, 끝에서 돌아감, 쿨다운 `SwitchCooldownSeconds` 0.5 s(상대 명령만 막음, 절대 번호는 막지 않음), 키 `N`·`B`(D2·D4). — 열림
+- 시험: E4b·E6(3 Door)·E12·E13·E13b–d·E14 바뀜/추가(§4).
