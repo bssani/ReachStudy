@@ -33,7 +33,7 @@
 | Q-03 | `Fingertips` = 다섯 손가락 끝(`ThumbTip`·`IndexTip`·`MiddleTip`·`RingTip`·`LittleTip`). `WholeHand` = 손 관절 전부(`EHandKeypoint` 26개) |
 | Q-04 | (제안대로) 설정 D-02~D-04는 레벨에 하나 두는 설정 Actor에 모은다. target별 덮어쓰기 없음 |
 | Q-05 | **3D 버튼은 참가자가 누른다.** Door·IP 밖의 빈 공간(예: 조수석 쪽)에 둔다. 버튼은 판정 대상이 아니다 |
-| Q-06 | 진행자 PC 창: 현재 Door(A/B), 정렬 상태, 지금 닿아 있는 target 이름, 좌·우 손 추적 상태. 텍스트만. **S3에서 만든다**(닿은 target은 S3 touch component가 있어야 제품 코드에서 읽을 수 있음, S4 명세 머리) |
+| Q-06 | **진행자 PC 화면 = 현재 Door 이름 + IP 이름만, PC 창에만**(vBoR 스펙테이터 방식). **헤드셋에는 어떤 메시지도 보이지 않는다** — 화면 메시지 전체 끔, S2 시험대 화면 글 없앰(사용자 2026-11-23, 전의 정렬·닿은 target·손 추적 줄은 뺌). [S4b 명세](Specs/S4b-pc-screen.md) |
 
 ## 4. 허용 거리·dwell 권장 기본값
 
@@ -55,7 +55,7 @@
 | 요소 | 내용 |
 |---|---|
 | `UReachTouchComponent` (C++) | **target mesh 밑에 붙이는 component**(D-13). Door·IP BP 안에 몇 개든. 상태 `Idle` / `Dwelling` / `Touching`. Touching이면 부모 mesh 하나에 overlay material을 켜고(slot material·옆 mesh는 건드리지 않음), Idle로 돌아가면 끈다. 이벤트 `OnTouchBegin` / `OnTouchEnd`. BP에서는 component를 붙이고 닿음 material만 고른다. Door BP는 Door 부모 actor라 Door와 같이 켜지고 꺼진다. [S3 명세](Specs/S3-touch-component.md) |
-| `AReachTouchSettings` (C++) | 레벨에 하나(Q-04). 부위·방식·mm·dwell·보류 시간·색, 진행자 창 켬. 판정은 world subsystem이 매 프레임 한 번에 한다(손 한 번 읽기, 손 근처가 아닌 target은 빠르게 거름) |
+| `AReachTouchSettings` (C++) | 레벨에 하나(Q-04). 부위·방식·mm·dwell·보류 시간·색. 판정은 world subsystem이 매 프레임 한 번에 한다(손 한 번 읽기, 손 근처가 아닌 target은 빠르게 거름) |
 | 손 관절 읽기 | XR 원본 관절 위치(`GetHandTrackingState`, vBoR `AVBoRHandRigPawn::ReadRawIndexTip`과 같은 경로, S2 D2). 추적 끊김 = 그 프레임 판정 안 함, 결과는 보류(§4) |
 | 닿음 판정 | 관절점마다 target 형상과의 닿음. 방식 A(simple collision까지 거리) / B(complex collision 구 overlap, 거리 값 없음) 중 하나를 **S2 결과로 정한다** |
 | `AReachDoorVariants` (C++) | Door마다 Actor 목록 — **Door 하나 = 부모 actor 하나**, 붙은 자식 actor(target mesh 포함)가 같이 켜지고 꺼진다(사용자 2026-11-23). 활성 Door만 보이고 collision이 켜진다 — actor 단위 숨김·collision만 바꾸고 원래 값으로 되돌린다. 전환하면 모든 target 초기화(D-08). IP는 이 목록에 없다. [S4 명세](Specs/S4-door-switch.md) |
@@ -69,8 +69,9 @@
 | **S0** | 프로젝트 부트스트랩 | 빈 C++ 프로젝트, 규칙 문서, Meta 플러그인 복사, git·GitHub | **완료 2026-11-22** (Claude). 빌드 결과는 개정 이력 |
 | **S1** | 정렬 가져오기 | vBoR Calibration 플러그인을 넣는다(Q-01, 플러그인 추출 뒤). 마커 기록·저장·재시작 복원, 앵커 옵션(D-01) | 자동화 시험 통과, Quest에서 마커 정렬 → 재시작 복원 (T-01) |
 | **S2** | 닿음 판정 spike | [명세](Specs/S2-contact-probe.md). 손 Pawn, 관절 읽기, 상태 규칙(순수 구조체), 거리 방식 A/B 비교 시험대 | Quest 실측 기록, 방식·기본값 결정 (T-02). 정렬 없이 |
-| **S3** | 닿음 component + 진행자 창 | [명세](Specs/S3-touch-component.md). `UReachTouchComponent`·`AReachTouchSettings`·판정 subsystem, S2 판정의 component 단위 함수, 설정(D-02~D-04, Q-04), 진행자 PC 창 텍스트(Q-06), `AReachGameMode`. 방식 A/B·기본값은 T-02 뒤 확정 | 자동화 시험: 진입·dwell·이탈·히스테리시스·추적 끊김·부위 모드 3종, Door 전환 초기화 |
+| **S3** | 닿음 component | [명세](Specs/S3-touch-component.md). `UReachTouchComponent`·`AReachTouchSettings`·판정 subsystem, S2 판정의 component 단위 함수, 설정(D-02~D-04, Q-04), `AReachGameMode`. S4b 뒤. 방식 A/B·기본값은 T-02 뒤 확정 | 자동화 시험: 진입·dwell·이탈·히스테리시스·추적 끊김·부위 모드 3종, Door 전환 초기화 |
 | **S4** | Door 전환 | [명세](Specs/S4-door-switch.md). `AReachDoorVariants`, 키보드·3D 버튼 패널, 손 Pawn poke 켜기, S2 시험대 연결 | 자동화 시험: 비활성 Door target 판정 안 됨, 전환 시 초기화, 동시 입력. 레벨은 Claude가 MCP로 |
+| **S4b** | PC 화면 | [명세](Specs/S4b-pc-screen.md). PC 창에만 Door·IP 이름(Q-06), 화면 메시지 끔, 시험대 글·패널 안내 글 없앰 | 자동화 시험: 글 만들기, 메시지 끔/되돌림. Quest: 헤드셋에 글 없음 |
 | **S5** | Main 통합 | CAD Datasmith import(`Content/CAD/`, git 밖), Door·IP를 BP로 묶고(Convert to Blueprint) target mesh에 touch component, `L_Main` | Quest 전체 흐름 (T-03) |
 
 ## 7. 시험 (Quest 3, 상태는 전부 `not-tested`)
@@ -96,3 +97,4 @@
 - 2026-11-23 — S4 명세 작성. `AReachVariantSet` → `AReachDoorVariants`, Door 전환 키 `Z`·`X`, 명령 `SelectVariant`. 진행자 PC 창(Q-06)을 S4 → S3로 옮김.
 - 2026-11-23 — S4 개정 1(사용자): D-08에 이전·다음 패널·돌아가기·쿨다운, Door 수 늘어날 수 있음. §5 Door = 부모 actor 하나, Door target은 Door 밑에.
 - 2026-11-23 — D-13(사용자): target = mesh 밑 component, BP마다 개수 다름. §5 `AReachTarget` → `UReachTouchComponent` + `AReachTouchSettings`, §6 S3·S5. S3 명세 작성.
+- 2026-11-23 — Q-06 바꿈(사용자): PC 화면은 Door·IP 이름만, 헤드셋 메시지 없음. S4b 명세 작성, 진행 순서 S4 → S4b → S3.
