@@ -2,7 +2,6 @@
 
 #include "Components/InputComponent.h"
 #include "Components/SceneComponent.h"
-#include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "Door/ReachDoorVariants.h"
 #include "GameFramework/PlayerController.h"
@@ -12,31 +11,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
-
-namespace
-{
-const TCHAR* PhaseName(EReachContactPhase Phase)
-{
-    return Phase == EReachContactPhase::Touching ? TEXT("Touching")
-        : Phase == EReachContactPhase::Dwelling ? TEXT("Dwelling") : TEXT("Idle");
-}
-
-FString SimpleText(const FReachContactQueryResult& Result, bool bTracked)
-{
-    if (!bTracked) { return TEXT("lost"); }
-    if (Result.DistanceMm < 0.0f) { return TEXT("n/a"); }
-    return FString::Printf(TEXT("%.1f mm %s r=%.1f mm"), Result.DistanceMm,
-        *StaticEnum<EHandKeypoint>()->GetNameStringByValue(static_cast<int64>(Result.NearestJoint)), Result.JointRadiusMm);
-}
-
-const TCHAR* ComplexText(const FReachContactQueryResult& Result, bool bTracked)
-{
-    if (!Result.bHasCollision) { return TEXT("no collision"); }
-    if (!bTracked) { return TEXT("lost"); }
-    return Result.Complex == EReachContactCondition::Enter ? TEXT("enter")
-        : Result.Complex == EReachContactCondition::Hold ? TEXT("hold") : TEXT("-");
-}
-}
 
 AReachContactProbe::AReachContactProbe()
 {
@@ -96,7 +70,6 @@ void AReachContactProbe::Tick(float DeltaSeconds)
     const FReachHandSample Left = Pawn ? Pawn->ReadHand(EControllerHand::Left, ContactPart) : FReachHandSample{};
     const FReachHandSample Right = Pawn ? Pawn->ReadHand(EControllerHand::Right, ContactPart) : FReachHandSample{};
     ProcessFrame(Left, Right, DeltaSeconds);
-    DrawReadout(Left, Right);
 }
 
 void AReachContactProbe::ProcessFrame(const FReachHandSample& Left, const FReachHandSample& Right, float DeltaSeconds)
@@ -167,43 +140,6 @@ void AReachContactProbe::HandleKey(FKey Key)
     ResetContacts();
 }
 
-void AReachContactProbe::DrawReadout(const FReachHandSample& Left, const FReachHandSample& Right)
-{
-    if (!GEngine) { return; }
-    GEngine->AddOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()), 0.0f, FColor::White, BuildReadout(Left, Right));
-}
-
-FString AReachContactProbe::BuildReadout(const FReachHandSample& Left, const FReachHandSample& Right) const
-{
-    double TotalMicroseconds = 0.0;
-    FString Rows;
-    for (const FReachProbeResult& Result : Results)
-    {
-        TotalMicroseconds += Result.CostMicroseconds;
-        if (Result.bInactive)
-        {
-            Rows += FString::Printf(TEXT("\n%s inactive"), *GetNameSafe(Result.Target.Get()));
-            continue;
-        }
-        Rows += FString::Printf(TEXT("\n%s %s | A L %s / R %s | B L %s / R %s | %.1f us"),
-            *GetNameSafe(Result.Target.Get()), PhaseName(Result.Phase),
-            *SimpleText(Result.Hands[0], Left.bTracked), *SimpleText(Result.Hands[1], Right.bTracked),
-            ComplexText(Result.Hands[0], Left.bTracked), ComplexText(Result.Hands[1], Right.bTracked), Result.CostMicroseconds);
-    }
-    const FString Header = FString::Printf(TEXT("%s | %s | contact %.0f mm | release %.0f mm | dwell %.2f s | grace %.2f s | radius %s | L %s / R %s | %.1f us"),
-        *StaticEnum<EReachContactPart>()->GetNameStringByValue(static_cast<int64>(ContactPart)),
-        *StaticEnum<EReachContactMethod>()->GetNameStringByValue(static_cast<int64>(ContactMethod)),
-        ContactDistanceMm, ReleaseMarginMm, DwellSeconds, TrackingGraceSeconds,
-        bUseJointRadius ? TEXT("on") : TEXT("off"), Left.bTracked ? TEXT("tracked") : TEXT("lost"),
-        Right.bTracked ? TEXT("tracked") : TEXT("lost"), TotalMicroseconds);
-    FString DoorHeader;
-    if (IsValid(DoorVariants) && DoorVariants->Variants.IsValidIndex(DoorVariants->GetActiveVariant()))
-    {
-        DoorHeader = FString::Printf(TEXT("door %s | "), *DoorVariants->Variants[DoorVariants->GetActiveVariant()].Name.ToString());
-    }
-    return DoorHeader + Header + Rows;
-}
-
 void AReachContactProbe::HandleVariantChanged(int32 Index)
 {
     ResetContacts();
@@ -223,6 +159,5 @@ void AReachContactProbe::EndPlay(const EEndPlayReason::Type EndPlayReason)
         DoorVariants->OnVariantChanged.RemoveDynamic(this, &AReachContactProbe::HandleVariantChanged);
     }
     ResetContacts();
-    if (GEngine) { GEngine->RemoveOnScreenDebugMessage(GetUniqueID()); }
     Super::EndPlay(EndPlayReason);
 }

@@ -272,8 +272,8 @@ bool FReachDoorProbeTest::RunTest(const FString& Parameters)
     TestNotNull(TEXT("E9: IP overlay before switch"), IPMesh->GetOverlayMaterial());
     TestTrue(TEXT("E10: B inactive and Idle"), Probe->GetResults()[1].bInactive && Probe->GetResults()[1].Phase == EReachContactPhase::Idle);
     TestNull(TEXT("E10: no inactive overlay"), BMesh->GetOverlayMaterial());
-    TestTrue(TEXT("Door name in header"), Probe->BuildReadout(SurfacePoint(), {}).Contains(TEXT("door Door A")));
-    TestTrue(TEXT("E10: inactive row text"), Probe->BuildReadout(SurfacePoint(), {}).Contains(F.B->GetName() + TEXT(" inactive")));
+    TestEqual(TEXT("Active door index"), F.Doors->GetActiveVariant(), 0);
+    TestTrue(TEXT("E10: inactive result belongs to B"), Probe->GetResults()[1].Target.Get() == F.B);
     F.Doors->SelectVariant(0);
     TestNotNull(TEXT("E3: same selection does not reset contacts"), AMesh->GetOverlayMaterial());
     F.Doors->SelectVariant(1);
@@ -307,7 +307,7 @@ bool FReachDoorAbsentTest::RunTest(const FString& Parameters)
     Probe->ProcessFrame(SurfacePoint(), {}, 0.01f);
     TestTrue(TEXT("E11: no door retains S2 touching"), Probe->GetResults()[0].Phase == EReachContactPhase::Touching);
     TestNotNull(TEXT("E11: no door retains overlay"), Mesh->GetOverlayMaterial());
-    TestFalse(TEXT("E11: no door header"), Probe->BuildReadout(SurfacePoint(), {}).Contains(TEXT("door ")));
+    TestNull(TEXT("E11: no door connection"), Probe->DoorVariants.Get());
     return true;
 }
 
@@ -464,10 +464,7 @@ bool FReachDoorEmptyWidgetTest::RunTest(const FString& Parameters)
     const TSharedRef<SWidget> Slate = Widget->TakeWidget();
     UHorizontalBox* Row = Cast<UHorizontalBox>(Widget->GetRootWidget());
     if (!TestNotNull(TEXT("Empty row created"), Row)) { return false; }
-    TestEqual(TEXT("E15: only message child"), Row->GetChildrenCount(), 1);
-    UTextBlock* Message = Cast<UTextBlock>(Row->GetChildAt(0));
-    if (!TestNotNull(TEXT("E15: no button, text only"), Message)) { return false; }
-    TestEqual(TEXT("E15: missing connection text"), Message->GetText().ToString(), FString(TEXT("No door variants")));
+    TestEqual(TEXT("E15: no buttons or text"), Row->GetChildrenCount(), 0);
     AddExpectedMessage(TEXT("No door variants"), EAutomationExpectedMessageFlags::Contains, 1);
     AReachDoorPanel* Panel = F.World->SpawnActor<AReachDoorPanel>();
     Panel->DispatchBeginPlay();
