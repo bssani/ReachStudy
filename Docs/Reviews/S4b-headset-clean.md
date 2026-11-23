@@ -73,3 +73,30 @@
 ## 질문
 
 없음.
+
+## 코드 리뷰 1회차 — Claude 2026-11-24 (`36390a8`) — 통과, 머지 가능
+
+### 재현
+
+- non-unity(`-DisableUnity -Module=ReachStudy`, 바뀐 cpp를 건드려 다시 컴파일): Succeeded, 경고·오류 0.
+- 실제 unity(`Module.ReachStudy.cpp`, git 무시 빌드 XML 잠시 적용 → 원래 바이트로 되돌림, `cmp` 같음): Succeeded, 경고·오류 0.
+- `ReachStudy.*` 24개(S2 9 + S4 11 + S4b 4) Success, `TEST COMPLETE. EXIT CODE: 0`, 프로세스 종료 0.
+- 소스 전체 `DrawDebug|AddOnScreenDebugMessage|AddToViewport|PrintString|DrawText|TextRender` 검색 0건(장면 안에 그리는 디버그 글도 없음).
+
+### 확인한 것
+
+- D1 subsystem은 Game·PIE만 만들어지고, BeginPlay한 world만 되돌린다(시작하지 않은 world가 전역 값을 덮지 않음 — 시험 있음). world가 바뀌어도 앞 world가 먼저 되돌리고 새 world가 다시 끄는 순서라 값이 꼬이지 않는다.
+- D2 시험대 글 코드 전부 삭제, 판정·overlay·키·Door 초기화는 그대로. S4 시험의 글 검사는 값 검사로 바뀜.
+- D3 패널 빈 줄 + 경고 로그. E3은 화면 메시지를 켠 상태에서 Tick해도 시험대 메시지가 없음을 확인한다.
+
+### 문제
+
+- 없음.
+
+### 메모 (머지를 막지 않음)
+
+- N-1 패널이 `Variants`가 빈 배열일 때도 빈 패널 + 경고로 처리한다(명세 D3은 `DoorVariants` 연결 없음만 적음). S4 D1 "Door 0개면 경고만"과 맞고 Door 0개에 `<`·`>`만 남는 것보다 낫다 — 받아들임. 다만 보고 ③에 "차이 없음"으로 적혀 있었다. 명세에 없던 처리는 ③에 적는다.
+
+### 다음
+
+- 사용자 승인 뒤 `main` 머지·push → Claude MCP S4 §6 에디터 작업 → HANDOFF를 S3로.
