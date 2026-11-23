@@ -33,7 +33,7 @@
 | Q-03 | `Fingertips` = 다섯 손가락 끝(`ThumbTip`·`IndexTip`·`MiddleTip`·`RingTip`·`LittleTip`). `WholeHand` = 손 관절 전부(`EHandKeypoint` 26개) |
 | Q-04 | (제안대로) 설정 D-02~D-04는 레벨에 하나 두는 설정 Actor에 모은다. target별 덮어쓰기 없음 |
 | Q-05 | **3D 버튼은 참가자가 누른다.** Door·IP 밖의 빈 공간(예: 조수석 쪽)에 둔다. 버튼은 판정 대상이 아니다 |
-| Q-06 | **진행자 PC 화면 = 현재 Door 이름 + IP 이름만, PC 창에만**(vBoR 스펙테이터 방식). **헤드셋에는 어떤 메시지도 보이지 않는다** — 화면 메시지 전체 끔, S2 시험대 화면 글 없앰(사용자 2026-11-23, 전의 정렬·닿은 target·손 추적 줄은 뺌). [S4b 명세](Specs/S4b-pc-screen.md) |
+| Q-06 | **진행자 PC 화면 없음. 헤드셋에는 어떤 메시지도 보이지 않는다** — 화면 메시지 전체 끔, S2 시험대 화면 글 없앰. 범위는 "touch하면 색이 바뀐다"까지(사용자 2026-11-23). 더 필요한 것은 사용자가 그때 꺼낸다. [S4b 명세](Specs/S4b-headset-clean.md) |
 
 ## 4. 허용 거리·dwell 권장 기본값
 
@@ -71,7 +71,7 @@
 | **S2** | 닿음 판정 spike | [명세](Specs/S2-contact-probe.md). 손 Pawn, 관절 읽기, 상태 규칙(순수 구조체), 거리 방식 A/B 비교 시험대 | Quest 실측 기록, 방식·기본값 결정 (T-02). 정렬 없이 |
 | **S3** | 닿음 component | [명세](Specs/S3-touch-component.md). `UReachTouchComponent`·`AReachTouchSettings`·판정 subsystem, S2 판정의 component 단위 함수, 설정(D-02~D-04, Q-04), `AReachGameMode`. S4b 뒤. 방식 A/B·기본값은 T-02 뒤 확정 | 자동화 시험: 진입·dwell·이탈·히스테리시스·추적 끊김·부위 모드 3종, Door 전환 초기화 |
 | **S4** | Door 전환 | [명세](Specs/S4-door-switch.md). `AReachDoorVariants`, 키보드·3D 버튼 패널, 손 Pawn poke 켜기, S2 시험대 연결 | 자동화 시험: 비활성 Door target 판정 안 됨, 전환 시 초기화, 동시 입력. 레벨은 Claude가 MCP로 |
-| **S4b** | PC 화면 | [명세](Specs/S4b-pc-screen.md). PC 창에만 Door·IP 이름(Q-06), 화면 메시지 끔, 시험대 글·패널 안내 글 없앰 | 자동화 시험: 글 만들기, 메시지 끔/되돌림. Quest: 헤드셋에 글 없음 |
+| **S4b** | 헤드셋 메시지 없음 | [명세](Specs/S4b-headset-clean.md). 화면 메시지 끔(Q-06), 시험대 글·패널 안내 글 없앰. PC 화면 UI 없음 | 자동화 시험: 메시지 끔/되돌림, 시험대 글 없음. Quest: 헤드셋에 글 없음 |
 | **S5** | Main 통합 | CAD Datasmith import(`Content/CAD/`, git 밖), Door·IP를 BP로 묶고(Convert to Blueprint) target mesh에 touch component, `L_Main` | Quest 전체 흐름 (T-03) |
 
 ## 7. 시험 (Quest 3, 상태는 전부 `not-tested`)
@@ -98,3 +98,4 @@
 - 2026-11-23 — S4 개정 1(사용자): D-08에 이전·다음 패널·돌아가기·쿨다운, Door 수 늘어날 수 있음. §5 Door = 부모 actor 하나, Door target은 Door 밑에.
 - 2026-11-23 — D-13(사용자): target = mesh 밑 component, BP마다 개수 다름. §5 `AReachTarget` → `UReachTouchComponent` + `AReachTouchSettings`, §6 S3·S5. S3 명세 작성.
 - 2026-11-23 — Q-06 바꿈(사용자): PC 화면은 Door·IP 이름만, 헤드셋 메시지 없음. S4b 명세 작성, 진행 순서 S4 → S4b → S3.
+- 2026-11-23 — Q-06 다시 바꿈(사용자): PC 화면에도 아무것도 없음, 범위는 "touch하면 색이 바뀐다"까지. S4b = 헤드셋 메시지 없음만(`S4b-headset-clean.md`).

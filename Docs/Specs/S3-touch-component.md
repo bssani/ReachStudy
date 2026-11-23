@@ -3,7 +3,7 @@
 | 항목 | 값 |
 |---|---|
 | 단계 | 계획서 §6 S3. 시험 T-02(제품 경로)·T-03 일부 |
-| 결정 근거 | 계획서 D-02~D-05, D-08, **D-13(사용자 2026-11-23: target = mesh 밑에 붙이는 component, BP마다 개수가 다름)**, Q-04(설정은 레벨에 하나). S2 리뷰 제안 S-1·S-2. **진행자 PC 화면(Q-06)은 S4b로 옮겼다** — 헤드셋에 어떤 메시지도 없다(사용자 2026-11-23) |
+| 결정 근거 | 계획서 D-02~D-05, D-08, **D-13(사용자 2026-11-23: target = mesh 밑에 붙이는 component, BP마다 개수가 다름)**, Q-04(설정은 레벨에 하나). S2 리뷰 제안 S-1·S-2. **진행자 PC 화면 없음(Q-06)** — 헤드셋에도 PC에도 메시지 없음, 범위는 닿으면 색 바뀜까지(사용자 2026-11-23) |
 | 베이스 브랜치 | **S4b가 `main`에 머지된 뒤의 `main`** (`AReachDoorVariants`·S4 개정 1, 화면 메시지 꺼짐 S4b) |
 | 작업 브랜치 | `codex/S3-touch-component` |
 | 리뷰 파일 | `Docs/Reviews/S3-touch-component.md` |
@@ -31,7 +31,7 @@
 | D6 | **판정 실행 = `UReachTouchSubsystem`** (`UTickableWorldSubsystem`, `Touch/`) | **Game·PIE world에서만**(`DoesSupportWorldType`) — 에디터 world에서는 돌지 않는다. component는 BeginPlay에 등록, EndPlay에 해제. 매 프레임: ① 손 두 개를 한 번 읽는다(D5) ② 등록된 component마다 — Door가 꺼진 owner(`IsActorActive(GetOwner())` false)면 상태를 비우고 overlay 끔, 판정 생략 — 아니면 넓은 거르기(D7) → `QueryComponent` 두 손 → S2 `FReachContactState::Step`(component마다 하나, 손별 이력 포함) ③ `Touching`이면 부모 mesh에 overlay, 아니면 끔 ④ **모든 component를 갱신한 뒤** 이번 프레임에 바뀐 것의 `OnTouchBegin`/`OnTouchEnd`를 부른다(BP 처리기가 목록을 바꿔도 순회가 깨지지 않게). 방식 A/B 선택은 S2 시험대와 같다(`Simple` / `Complex` 조건) |
 | D7 | **넓은 거르기 (결과를 바꾸지 않는 빠른 길)** | component마다 부모의 `Bounds` 상자와 `GetBodyBounds()`를 합친 상자를 (`ContactDistanceMm` + `ReleaseMarginMm` + 그 손 관절 반지름 중 최대값)만큼 키운다. 한 손의 모든 관절이 그 상자 밖이면 그 손은 `QueryComponent`를 부르지 않고 조건 `None`이다. 두 상자를 합치는 이유: simple collision이 그리기 경계 밖으로 나올 수 있다. **거르기가 있든 없든 Enter/Hold/None은 같아야 한다**(E12) |
 | D8 | **Door 전환 = 모든 상태 초기화** (D-08) | 설정의 `DoorVariants`가 있으면 `OnVariantChanged`에 묶는다. 바뀌면 그 자리에서 **모든 component**(Door·IP 모두)의 상태·손 이력을 비우고 overlay를 끈다. 그때 `Touching`이던 component는 `OnTouchEnd`를 한 번 부른다. 다음 첫 실측 프레임은 판정하지 않는다(S2 D4 그대로) |
-| D9 | **화면 글 없음 — 알림은 로그로** | S3는 화면에 아무것도 쓰지 않는다(S4b §2: 헤드셋에 메시지 없음, PC 화면은 Door·IP 이름만). Pawn이 `AReachHandPawn`이 아니면 시작 때 `Warning` 로그 한 줄 `Pawn is not ReachHandPawn (hands hidden, no poke)` — **S2 리뷰 S-1**. 판정은 Pawn 없이도 된다(D5) |
+| D9 | **화면 글 없음 — 알림은 로그로** | S3는 화면에 아무것도 쓰지 않는다(S4b §2: 헤드셋·PC 창에 메시지 없음). Pawn이 `AReachHandPawn`이 아니면 시작 때 `Warning` 로그 한 줄 `Pawn is not ReachHandPawn (hands hidden, no poke)` — **S2 리뷰 S-1**. 판정은 Pawn 없이도 된다(D5) |
 | D10 | **`AReachGameMode`** (`Source/ReachStudy/`, 제품) | `DefaultPawnClass = AReachHandPawn`. S5 `L_Main`과 §6 시험 레벨이 쓴다. 제품 코드가 `Development/AReachProbeGameMode`를 쓰지 않게 |
 | D11 | **dwell 누적 (S2 리뷰 S-2)** | 그대로 둔다. `DwellElapsedSeconds += DeltaSeconds`는 경계를 최대 한 프레임(90 Hz에서 11 ms) 늦게 넘는다 — 프레임 단위로 판정하는 이상 피할 수 없는 크기이고, reach 확인에 의미 있는 차이가 아니다 |
 
@@ -46,7 +46,7 @@
 
 ## 3. 범위 밖
 
-- 정렬(S1). 진행자 PC 화면(S4b).
+- 정렬(S1). 진행자 PC 화면(만들지 않음, 계획서 Q-06).
 - CAD import, Datasmith actor를 BP로 묶는 작업(S5, 에디터 Convert to Blueprint).
 - 방식 A/B·기본값 확정(T-02 Quest 실측 뒤 별도 개정).
 - target별 설정 덮어쓰기(Q-04), 닿음 소리·연출(BP에서 이벤트에 붙임).
@@ -85,7 +85,7 @@
 새 레벨 `Content/Development/S3/L_S3_Touch`(S2 시험대 레벨과 나눔, §2):
 
 1. `BP_TestDoorA`(큐브 mesh 3개, 그중 2개 밑에 `ReachTouch`), `BP_TestDoorB`(mesh 4개, 3개에 `ReachTouch`), `BP_TestIP`(mesh 2개, 2개에 `ReachTouch`) — 개수가 서로 다르게(D-13). 하나는 `TouchMaterial`을 다른 색으로.
-2. `AReachTouchSettings` 하나, `AReachDoorVariants`(Door A {`BP_TestDoorA`}, Door B {`BP_TestDoorB`}), S4 `BP_DoorPanel`, S4b `AReachPcScreen`, `SeatStart`, GameMode override `AReachGameMode`.
+2. `AReachTouchSettings` 하나, `AReachDoorVariants`(Door A {`BP_TestDoorA`}, Door B {`BP_TestDoorB`}), S4 `BP_DoorPanel`, `SeatStart`, GameMode override `AReachGameMode`.
 3. PIE: `Z`/`X`·`N`/`B`로 Door 전환, 경고 없음. 스크린샷.
 
 ## 7. 완료 조건
@@ -102,4 +102,4 @@
 
 ## 개정 이력
 
-- 2026-11-23 — 초안 (Claude). 사용자 결정 D-13(mesh 밑 component, BP마다 개수 다름)으로 계획서의 `AReachTarget` actor 방식을 바꿈. S2 리뷰 S-1(pawn 경고 → 로그)·S-2(dwell 누적 그대로) 정리. 같은 날 진행자 창을 S4b로 옮김(헤드셋 메시지 없음).
+- 2026-11-23 — 초안 (Claude). 사용자 결정 D-13(mesh 밑 component, BP마다 개수 다름)으로 계획서의 `AReachTarget` actor 방식을 바꿈. S2 리뷰 S-1(pawn 경고 → 로그)·S-2(dwell 누적 그대로) 정리. 같은 날 진행자 창 뺌(헤드셋·PC 메시지 없음, S4b).

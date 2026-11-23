@@ -114,4 +114,4 @@ S2의 `ReachStudy.S2.*` 시험은 그대로 통과해야 한다.
 
 - 2026-11-23 개정 1 (사용자 결정, 리뷰 1회차 뒤): 패널을 이전·다음 버튼 + 지금 Door 글로(D6), 상대 명령 `SelectNext`·`SelectPrevious`와 끝에서 돌아가기·쿨다운 0.5 s(D2), 키 `N`·`B`(D4), 공유 actor는 활성 Door 소속으로 판단 + 경고(D3, 리뷰 S-1), 잘못된 `InitialVariant`는 경고 + 0번(D1, 리뷰 S-2), Door 하나 = 부모 actor 하나(D1). 시험 E4b·E6·E12–E14·E13b–d.
 - 2026-11-23 — 초안 (Claude). 계획서 §5·§6·Q-06, S2 명세 §2·D1과 같이 맞춤(진행자 창 S4 → S3, Pawn poke 켜기, Door 전환이 actor collision을 끄는 것).
-- 2026-11-23 — S4b가 바꿀 것(이 명세 구현에는 영향 없음): D8 ② 시험대 헤더 `door <Name>`·E10 `inactive` 줄 글은 시험대 화면 글과 함께 없어지고, D5·E15 패널 안내 글 `No door variants`는 빈 패널로 바뀐다([S4b](S4b-pc-screen.md) D4·D5).
+- 2026-11-23 — S4b가 바꿀 것(이 명세 구현에는 영향 없음): D8 ② 시험대 헤더 `door <Name>`·E10 `inactive` 줄 글은 시험대 화면 글과 함께 없어지고, D5·E15 패널 안내 글 `No door variants`는 빈 패널로 바뀐다([S4b](S4b-headset-clean.md) D2·D3). 진행자 PC 창은 만들지 않기로 했다(계획서 Q-06).
