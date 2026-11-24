@@ -116,3 +116,39 @@ print(len(files), len(mismatches), len(extras))  # 27 0 0
 ## 질문
 
 - 없음.
+
+---
+
+# Claude 리뷰 1회차 (2026-11-24, `7c4ddbe`) — **통과**
+
+## 확인한 것
+
+- **AGENTS.md 제약:**
+  - Meta 플러그인·CAD·`Saved/`·`UserEngine.ini`가 커밋에 없다.
+  - `Source/`에 화면 출력 호출 0건, Pawn 이동·부착 호출 0건(grep 직접).
+  - 코드 문구는 영어다.
+- **키트 동일성:** 키트 `main`의 `ls-tree -r Plugins/VRCalibrationKit`와 브랜치의 같은 tree가 blob 해시까지 같다(27/27). 키트 파일 수정 없음(D1).
+- **범위:** 바뀐 파일이 명세 D1–D7과 같다(uproject·ini 두 줄, `StartPlay`, 정렬 GameMode, S4b 예외 5줄, Build.cs private 의존, 시험). 명세 밖 기능 없음.
+- **D3 순서:** `WorldToMeters`·Stage → 로그 → `Super::StartPlay()`. E1·E2가 실제 `SetGameMode` → `InitializeActorsForPlay` → `BeginPlay` 경로에서 actor BeginPlay가 100을 보는 것으로 확인한다.
+- **D5:**
+  - `OnWorldBeginPlay`에서 `GetAuthGameMode<AReachCalibrationGameMode>()`면 바로 돌아간다. `bMessagesDisabled`가 false로 남아 `Deinitialize`가 되돌리지 않는다.
+  - E3의 "중간에 바뀐 값을 끝날 때 덮지 않음" 검사가 좋다.
+- **E5:** 합성 점이 90° 회전 + 이동이라 맞춘 상대 위치 `(120,-80,0)`, yaw 90°가 손으로 계산한 값과 같다.
+- **재현:** Claude가 다시 해 봤다.
+  - 빌드: non-unity(`-DisableUnity -Module=ReachStudy`)·unity(`Module.ReachStudy.cpp`, 임시 BuildConfiguration 뒤 원본 복원 `cmp` 일치) 모두 경고·오류 0.
+  - 시험: `ReachStudy.*` 39/39, `VRCalibrationKit.*` 46/46, exit 0(`UserEngine.ini` 없음).
+  - 로그: `Saved/Logs/S1-claude-nonunity.log`, `S1-claude-unity.log`, `S1-claude-ReachStudy.log`, `S1-claude-VRCalibrationKit.log`.
+
+## 문제
+
+- 없음.
+
+## 제안 (반영 안 해도 됨)
+
+- **N-1:** `VRCalibrationCore` 의존은 시험만 쓰지만 제품 모듈에도 링크된다. 명세 D7대로이고 모든 플랫폼 모듈이라 문제없다. 제품 코드가 키트 API를 부르기 시작하면 그때 다시 본다.
+- **N-2:** `AReachProbeGameMode`(S2 시험대)는 Stage를 정하지 않는다. 명세 §2대로이고 `L_S2_ContactProbe`는 정렬하지 않는다. 시험대 레벨에 차를 놓아도 Pawn은 옮겨지지 않는다(`Stage tracking origin required`).
+
+## 확인할 시험 (`not-tested`)
+
+- Claude: 명세 §6 에디터 작업·PIE.
+- 사용자: Quest 3 T-01(명세 §8).
