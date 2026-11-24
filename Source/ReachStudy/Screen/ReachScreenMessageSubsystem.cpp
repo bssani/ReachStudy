@@ -1,5 +1,6 @@
 #include "Screen/ReachScreenMessageSubsystem.h"
 
+#include "ReachCalibrationGameMode.h"
 #include "CoreGlobals.h"
 #include "Engine/World.h"
 
@@ -15,6 +16,11 @@ bool UReachScreenMessageSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 void UReachScreenMessageSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
     Super::OnWorldBeginPlay(InWorld);
+    if (InWorld.GetAuthGameMode<AReachCalibrationGameMode>())
+    {
+        UE_LOG(LogReachScreenMessages, Log, TEXT("Screen messages kept (calibration level, S1)"));
+        return;
+    }
     bPreviousMessagesEnabled = GAreScreenMessagesEnabled;
     bMessagesDisabled = true;
     GAreScreenMessagesEnabled = false;

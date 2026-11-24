@@ -12,6 +12,14 @@
 	],
 	"Plugins": [
 		{
+			"Name": "VRCalibrationKit",
+			"Enabled": true
+		},
+		{
+			"Name": "OpenXR",
+			"Enabled": true
+		},
+		{
 			"Name": "XRBase",
 			"Enabled": true
 		},

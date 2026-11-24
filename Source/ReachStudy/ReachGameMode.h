@@ -10,4 +10,5 @@ class REACHSTUDY_API AReachGameMode : public AGameModeBase
     GENERATED_BODY()
 public:
     AReachGameMode();
+    virtual void StartPlay() override;
 };
