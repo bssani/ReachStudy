@@ -152,3 +152,36 @@ print(len(files), len(mismatches), len(extras))  # 27 0 0
 
 - Claude: 명세 §6 에디터 작업·PIE.
 - 사용자: Quest 3 T-01(명세 §8).
+
+---
+
+# §6 에디터 작업 (Claude, 2026-11-24)
+
+1. **키트 기기 시험 배치 읽기**
+   - 방법: 키트 프로젝트에서 Python commandlet으로 읽기만 했다. 키트 리포는 바뀌지 않았다.
+   - `BP_SampleCar` CDO와 `L_Calibrate`·`L_Sample`의 차 인스턴스 모두 C++ 기본값 그대로다(바꾼 값 없음).
+     - 점 1–4: `(4,-60,50)`, `(4,-14,50)`, `(-44,-14,50)`, `(-44,-60,50)` cm
+     - `FloorLocalZCm` 0, `PointFitLimitCm` 2, `Bucks` 없음
+     - 차는 원점, scale 1
+   - 정렬 도구도 기본값 그대로다: `MarkerArrowLocal` (1,0,0), `MarkerSizeMm` 60.
+2. **`Content/Development/S1/BP_S1Car`**
+   - 구성: Actor(`DefaultSceneRoot`, scale 1) + `Alignment`(`UVRCalAlignmentComponent`, `FloorLocalZCm` 0) + `AlignmentPoint1`–`4`(`Order` 1–4, `Label` `Marker N`, 위 위치).
+   - Python commandlet(`-EnablePlugins=PythonScriptPlugin,EditorScriptingUtilities`)으로 만들었다. uproject는 바꾸지 않았다.
+3. **`Content/Development/S1/L_S1_Calibrate`**
+   - `L_S3_Touch`를 복제한 뒤 Door·IP·설정·패널을 지웠다.
+   - 남은 것: Sun·Sky·Floor·SeatStart + `S1Car`(원점) + `MarkerCalibrator`(기본값).
+   - GameMode override `AReachCalibrationGameMode`.
+4. **`L_S3_Touch`:** `S1Car`를 원점에 더했다. `DoorVariants` 목록 밖이다.
+5. **PIE(에디터, MCP)**
+   - `L_S1_Calibrate`:
+     - `Game class is 'ReachCalibrationGameMode'`
+     - `Screen messages kept (calibration level, S1)`
+     - `Tracking origin Stage, WorldToMeters 100 (S1)`
+     - 키트 키 안내 로그, `Left camera started`, `Camera model check passed`
+     - `S1Car.Alignment.State` = `NoSavedValue`(저장 전이라 정상)
+   - `L_S3_Touch`:
+     - `ReachGameMode`, `Screen messages disabled (S4b)`, Stage 로그
+     - `State` = `NoSavedValue`
+   - Ensure·오류 없음. Meta Project Setup Tool·LogHMD 소음뿐이다.
+   - 참고: `-game -nullrhi`(XR 없음)로 레벨을 띄우면 ISDK 손 rig가 `UIsdkHandDataSource::SetInboundHandData`에서 멈춘다. 기존 `L_S3_Touch`에서도 같다. ISDK가 tracking subsystem 없이 도는 경우라 S1과 무관하다. 레벨 확인은 에디터 PIE로 한다.
+6. Quest 3 T-01은 `not-tested` — 사용자 몫(명세 §8).
