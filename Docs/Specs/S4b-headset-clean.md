@@ -64,3 +64,4 @@ S2·S4 시험은 D2·D3에서 바꾼 글 검사 말고는 그대로 통과해야
 
 - 2026-11-23 — 초안 (Claude). 사용자 요청(PC 화면 Door·IP 이름, 헤드셋 메시지 없음, 시험대 글 없앰).
 - 2026-11-23 — 개정 1 (사용자): **PC 화면 UI 뺌** — "touch하면 색이 바뀌는 것까지가 범위". `AReachPcScreen`·스펙테이터 경로·`RenderCore` 없앰. 파일 이름 `S4b-pc-screen.md` → `S4b-headset-clean.md`.
+- 2026-11-24 — D1 예외 (사용자, [S1](S1-calibration-import.md) D5): GameMode가 `AReachCalibrationGameMode`인 정렬 레벨에서는 화면 메시지를 끄지 않는다. 그 밖의 world는 그대로.
